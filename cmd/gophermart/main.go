@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -11,21 +10,42 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
 	"github.com/Dyuzhovsergey/gophermart/internal/logger"
+	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
+
 	"go.uber.org/zap"
 )
 
 func main() {
 	cfg := config.Parse()
 
-	zapLogger, err := logger.Init()
+	// ---------------- Инициализация логгера ----------------
+	log, err := logger.Init()
 	if err != nil {
-		// логгера нет — остаётся только аварийный выход
-		panic(err)
+		panic(err) // логгера нет — остаётся только аварийный выход
 	}
-	defer func() { _ = zapLogger.Sync() }()
+	defer func() { _ = log.Sync() }()
 
+	// ---------------- Контекст завершения приложения ----------------
+	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// ---------------- Подключение к Postgres ----------------
+	pool, err := postgres.Connect(rootCtx, cfg.DatabaseURI, log)
+	if err != nil {
+		log.Fatal("db connect failed", zap.Error(err))
+	}
+	defer pool.Close()
+
+	// ---------------- Миграции ----------------
+	if err := postgres.RunMigrations(rootCtx, pool); err != nil {
+		log.Fatal("migrations failed", zap.Error(err))
+	}
+	log.Info("migrations applied")
+
+	// ---------------- HTTP Роутер ----------------
 	router := httpserver.NewRouter(httpserver.Deps{
-		Logger: zapLogger,
+		Logger: log,
+		// сюда позже добавим storage/service
 	})
 
 	srv := &http.Server{
@@ -33,26 +53,25 @@ func main() {
 		Handler: router,
 	}
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	defer signal.Stop(stop)
-
+	// ---------------- Запуск HTTP-сервера ----------------
 	go func() {
-		zapLogger.Info("starting server", zap.String("addr", cfg.RunAddress))
+		log.Info("starting server", zap.String("addr", cfg.RunAddress))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			zapLogger.Fatal("listen failed", zap.Error(err))
+			log.Fatal("listen failed", zap.Error(err))
 		}
 	}()
 
-	<-stop
-	zapLogger.Info("shutting down")
+	// ---------------- Ждём SIGINT / SIGTERM ----------------
+	<-rootCtx.Done()
+	log.Info("shutting down")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// ---------------- Корректное завершение HTTP-сервера ----------------
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		zapLogger.Error("shutdown error", zap.Error(err))
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("shutdown error", zap.Error(err))
 	}
 
-	zapLogger.Info("stopped")
+	log.Info("stopped")
 }

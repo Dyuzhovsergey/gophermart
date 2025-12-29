@@ -11,9 +11,9 @@ import (
 )
 
 // LOGIN and PASS
-// postgres=# CREATE USER gofermart_dyuzhov WITH PASSWORD 'dyuzhov90419@';
+// postgres=# CREATE USER gophermart_dyuzhov WITH PASSWORD 'dyuzhov90419@';
 
-// export DATABASE_URI="postgres://gofermart_dyuzhov:dyuzhov90419%40@localhost:5432/gofermart?sslmode=disable"
+// export DATABASE_URI="postgres://gophermart_dyuzhov:dyuzhov90419%40@localhost:5432/gophermart?sslmode=disable"
 
 // Connect creates a pgxpool.Pool and verifies connection with Ping.
 // ctx is used for both pool creation and ping (recommended: pass ctx with timeout).
