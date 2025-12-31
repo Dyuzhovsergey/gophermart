@@ -17,7 +17,7 @@ import (
 
 // Connect creates a pgxpool.Pool and verifies connection with Ping.
 // ctx is used for both pool creation and ping (recommended: pass ctx with timeout).
-func Connect(ctx context.Context, dsn string, lg *zap.Logger) (*pgxpool.Pool, error) {
+func Connect(ctx context.Context, dsn string, log *zap.Logger) (*pgxpool.Pool, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("DATABASE_URI is empty")
 	}
@@ -45,8 +45,8 @@ func Connect(ctx context.Context, dsn string, lg *zap.Logger) (*pgxpool.Pool, er
 		return nil, fmt.Errorf("db ping: %w", err)
 	}
 
-	if lg != nil {
-		lg.Info("postgres connected")
+	if log != nil {
+		log.Info("postgres connected")
 	}
 
 	return pool, nil
