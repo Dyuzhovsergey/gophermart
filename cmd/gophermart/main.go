@@ -21,7 +21,7 @@ func main() {
 	// ---------------- Инициализация логгера ----------------
 	log, err := logger.Init()
 	if err != nil {
-		panic(err) // логгера нет — остаётся только аварийный выход
+		panic(err)
 	}
 	defer func() { _ = log.Sync() }()
 
