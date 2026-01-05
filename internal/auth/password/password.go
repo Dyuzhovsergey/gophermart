@@ -1,4 +1,4 @@
-// Package password содержит функции для хеширования и проверки паролей.
+// Package password for create hash password and check password.
 package password
 
 import (
@@ -29,7 +29,6 @@ func HashPassword(password string) (string, error) {
 }
 
 // CheckPassword проверяет соответствие пароля bcrypt-хешу.
-// Возвращает (true, nil) если пароль подходит, (false, nil) если не подходит.
 func CheckPassword(hash, password string) (bool, error) {
 	if hash == "" {
 		return false, ErrEmptyHash
@@ -40,12 +39,11 @@ func CheckPassword(hash, password string) (bool, error) {
 
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err == nil {
-		return true, nil
+		return true, nil // пароль подходит
 	}
 
-	// Неверный пароль — это не "ошибка" инфраструктуры, просто факт.
 	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		return false, nil
+		return false, nil // пароль не подходит
 	}
 
 	// Остальные ошибки (например, битый формат хеша) — возвращаем как err.
