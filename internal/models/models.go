@@ -1,37 +1,36 @@
-// Package models
+// Package models содержит доменные модели проекта.
 package models
 
 import "time"
 
-// User — доменная модель пользователя
-// логин уникальный, пароль хранится в виде хеша
+// User — доменная модель пользователя.
+// Логин уникальный, пароль хранится в виде хеша.
 type User struct {
-	ID        int64
-	Login     string
-	Password  string
-	CreatedAt time.Time
+	ID        int64     `json:"-"`
+	Login     string    `json:"login"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time `json:"-"`
 }
 
-// Order — заказ пользователя в системе лояльности
-// status и accrual приходят из внешней системы
+// Order — заказ пользователя в системе лояльности.
+// Статус и начисления приходят из внешней системы.
 type Order struct {
-	Number     string
-	UserID     int64
-	Status     string
-	Accrual    float64
-	UploadedAt time.Time
+	Number     string    `json:"number"`
+	Status     string    `json:"status"`
+	Accrual    float64   `json:"accrual,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
-// Balance — состояние бонусного счета
+// Balance — состояние бонусного счёта пользователя.
 type Balance struct {
-	Current   float64
-	Withdrawn float64
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
 }
 
-// Withdrawal — списание средств пользователем
+// Withdrawal — списание средств пользователем.
+// В API поле называется "order" (по ТЗ), в БД колонка может называться order_number.
 type Withdrawal struct {
-	UserID    int64
-	Order     string
-	Sum       float64
-	Processed time.Time
+	Order     string    `json:"order"`
+	Sum       float64   `json:"sum"`
+	Processed time.Time `json:"processed_at"`
 }
