@@ -26,7 +26,6 @@ func MapErrorToStatus(err error) int {
 		return http.StatusNotFound
 
 	case domainerr.ErrAlreadyUploadedByUser:
-		// По ТЗ: если заказ уже был загружен этим пользователем — 200 OK.
 		return http.StatusOK
 
 	default:
