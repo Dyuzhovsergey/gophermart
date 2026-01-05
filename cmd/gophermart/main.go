@@ -16,14 +16,22 @@ import (
 )
 
 func main() {
-	cfg := config.Parse()
-
 	// ---------------- Инициализация логгера ----------------
 	log, err := logger.Init()
 	if err != nil {
 		panic(err)
 	}
 	defer func() { _ = log.Sync() }()
+
+	// ---------------- Парсинг конфига ----------------
+	cfg := config.Parse()
+
+	if cfg.JWTSecret == "" {
+		log.Fatal("JWT_SECRET is empty")
+	}
+	if cfg.JWTTTL <= 0 {
+		log.Fatal("JWT_TTL must be positive", zap.String("jwt_ttl", cfg.JWTTTL.String()))
+	}
 
 	// ---------------- Контекст завершения приложения ----------------
 	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
