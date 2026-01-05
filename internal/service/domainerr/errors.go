@@ -1,5 +1,5 @@
-// Package errors discription domian errors
-package errors
+// Package domainerr discription domian errors
+package domainerr
 
 import "errors"
 
