@@ -46,7 +46,7 @@ func New(secret string, ttl time.Duration) (*Manager, error) {
 }
 
 // Generate выпускает JWT для пользователя.
-// userID кладём в standard claim "sub" (subject).
+// userID в standard claim "sub" (subject).
 func (m *Manager) Generate(userID int64) (string, error) {
 	now := m.now()
 
