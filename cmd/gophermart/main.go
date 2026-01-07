@@ -78,7 +78,7 @@ func main() {
 		Auth:   authSvc,
 	})
 
-	srv := &http.Server{
+	server := &http.Server{
 		Addr:    cfg.RunAddress,
 		Handler: router,
 	}
@@ -86,7 +86,7 @@ func main() {
 	// ---------------- Запуск HTTP-сервера ----------------
 	go func() {
 		log.Info("starting server", zap.String("addr", cfg.RunAddress))
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("listen failed", zap.Error(err))
 		}
 	}()
@@ -99,7 +99,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown error", zap.Error(err))
 	}
 

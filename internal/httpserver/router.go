@@ -17,6 +17,11 @@ func NewRouter(deps Deps) http.Handler {
 	r.Use(middleware.Logger(deps.Logger))
 
 	r.Get("/health", handlers.Health)
+	
+	// AUTH
+	authHandler := handlers.NewAuthHandler(deps.Logger, deps.Auth)
+	r.Post("/api/user/register", authHandler.Register)
+	r.Post("/api/user/login", authHandler.Login)
 
 	return r
 }
