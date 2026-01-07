@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	authjwt "github.com/Dyuzhovsergey/gophermart/internal/auth/jwt"
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
 	"github.com/Dyuzhovsergey/gophermart/internal/logger"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
 
 	"go.uber.org/zap"
@@ -50,10 +53,29 @@ func main() {
 	}
 	log.Info("migrations applied")
 
+	// ---------------- Репозиторий пользователей ----------------
+	userRepo := postgres.NewUserRepository(pool)
+
+	// ---------------- JWT менеджер ----------------
+	// Секрет лучше хранить в ENV. Для разработки можно задать дефолт.
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Warn("JWT_SECRET is empty, using dev secret")
+		jwtSecret = "dev-secret"
+	}
+
+	jwtMgr, err := authjwt.New(jwtSecret, 24*time.Hour)
+	if err != nil {
+		log.Fatal("jwt init failed", zap.Error(err))
+	}
+
+	// ---------------- Auth service ----------------
+	authSvc := auth.New(userRepo, jwtMgr)
+
 	// ---------------- HTTP Роутер ----------------
 	router := httpserver.NewRouter(httpserver.Deps{
 		Logger: log,
-		// сюда позже добавим storage/service
+		Auth:   authSvc,
 	})
 
 	srv := &http.Server{
