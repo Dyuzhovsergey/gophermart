@@ -10,7 +10,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/service/userrepo"
 )
 
-// TokenManager — минимальный интерфейс для выпуска токена.
+// TokenManager — интерфейс для выпуска токена.
 type TokenManager interface {
 	Generate(userID int64) (string, error)
 }

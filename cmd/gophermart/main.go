@@ -76,6 +76,7 @@ func main() {
 	router := httpserver.NewRouter(httpserver.Deps{
 		Logger: log,
 		Auth:   authSvc,
+		JWT:    jwtMgr,
 	})
 
 	server := &http.Server{
