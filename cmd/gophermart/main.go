@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
 	"github.com/Dyuzhovsergey/gophermart/internal/logger"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
 
 	"go.uber.org/zap"
@@ -41,30 +41,34 @@ func main() {
 	defer stop()
 
 	// ---------------- Подключение к Postgres ----------------
-	pool, err := postgres.Connect(rootCtx, cfg.DatabaseURI, log)
+	connectCtx, cancelConnect := context.WithTimeout(rootCtx, 5*time.Second)
+	defer cancelConnect()
+
+	pool, err := postgres.Connect(connectCtx, cfg.DatabaseURI, log)
 	if err != nil {
 		log.Fatal("db connect failed", zap.Error(err))
 	}
 	defer pool.Close()
 
 	// ---------------- Миграции ----------------
-	if err := postgres.RunMigrations(rootCtx, pool); err != nil {
+	migCtx, cancelMig := context.WithTimeout(rootCtx, 5*time.Second)
+	defer cancelMig()
+
+	if err := postgres.RunMigrations(migCtx, pool); err != nil {
 		log.Fatal("migrations failed", zap.Error(err))
 	}
 	log.Info("migrations applied")
 
-	// ---------------- Репозиторий пользователей ----------------
+	// ---------------- Репозитории ----------------
 	userRepo := postgres.NewUserRepository(pool)
+	ordersRepo := postgres.NewOrdersRepository(pool)
+
+	// ---------------- Сервисы ----------------
+	ordersSvc := orders.New(ordersRepo)
 
 	// ---------------- JWT менеджер ----------------
-	// Секрет лучше хранить в ENV. Для разработки можно задать дефолт.
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Warn("JWT_SECRET is empty, using dev secret")
-		jwtSecret = "dev-secret"
-	}
 
-	jwtMgr, err := authjwt.New(jwtSecret, 24*time.Hour)
+	jwtMgr, err := authjwt.New(cfg.JWTSecret, 24*time.Hour)
 	if err != nil {
 		log.Fatal("jwt init failed", zap.Error(err))
 	}
@@ -77,6 +81,7 @@ func main() {
 		Logger: log,
 		Auth:   authSvc,
 		JWT:    jwtMgr,
+		Orders: ordersSvc,
 	})
 
 	server := &http.Server{
@@ -99,7 +104,6 @@ func main() {
 	// ---------------- Корректное завершение HTTP-сервера ----------------
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown error", zap.Error(err))
 	}

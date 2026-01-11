@@ -1,4 +1,4 @@
-// Package config provides application configuration (FLAGS > ENV > DEFAULT).
+// Package config provides application configuration (FLAGS > ENV > DEFAULT)
 package config
 
 import (
