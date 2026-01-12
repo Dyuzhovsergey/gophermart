@@ -59,13 +59,6 @@ func main() {
 	}
 	log.Info("migrations applied")
 
-	// ---------------- Репозитории ----------------
-	userRepo := postgres.NewUserRepository(pool)
-	ordersRepo := postgres.NewOrdersRepository(pool)
-
-	// ---------------- Сервисы ----------------
-	ordersSvc := orders.New(ordersRepo)
-
 	// ---------------- JWT менеджер ----------------
 
 	jwtMgr, err := authjwt.New(cfg.JWTSecret, 24*time.Hour)
@@ -73,7 +66,12 @@ func main() {
 		log.Fatal("jwt init failed", zap.Error(err))
 	}
 
-	// ---------------- Auth service ----------------
+	// ---------------- Репозитории ----------------
+	userRepo := postgres.NewUserRepository(pool)
+	ordersRepo := postgres.NewOrdersRepository(pool)
+
+	// ---------------- Сервисы ----------------
+	ordersSvc := orders.New(ordersRepo)
 	authSvc := auth.New(userRepo, jwtMgr)
 
 	// ---------------- HTTP Роутер ----------------
