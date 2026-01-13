@@ -12,6 +12,9 @@ type Service interface {
 	// UploadOrder валидирует номер заказа и пытается добавить его в систему.
 	// Возвращает nil при успешной регистрации нового заказа.
 	UploadOrder(ctx context.Context, userID int64, number string) error
+
+	// ListOrders возвращает список заказов пользователя для выдачи в API.
+	ListOrders(ctx context.Context, userID int64) ([]ordersrepo.Order, error)
 }
 
 type service struct {
@@ -29,4 +32,10 @@ func (s *service) UploadOrder(ctx context.Context, userID int64, number string) 
 		return err
 	}
 	return s.repo.AddOrder(ctx, userID, number)
+	
+}
+
+// ListOrders возвращает список заказов пользователя.
+func (s *service) ListOrders(ctx context.Context, userID int64) ([]ordersrepo.Order, error) {
+	return s.repo.ListOrdersByUser(ctx, userID)
 }

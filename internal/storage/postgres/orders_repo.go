@@ -5,8 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/ordersrepo"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -66,4 +69,57 @@ func (r *OrdersRepository) AddOrder(ctx context.Context, userID int64, number st
 	}
 
 	return fmt.Errorf("add order: %w", err)
+}
+
+// ListOrdersByUser возвращает заказы пользователя в порядке uploaded_at DESC.
+func (r *OrdersRepository) ListOrdersByUser(ctx context.Context, userID int64) ([]ordersrepo.Order, error) {
+	const q = `
+		SELECT number, status, accrual, uploaded_at
+		FROM orders
+		WHERE user_id = $1
+		ORDER BY uploaded_at DESC;
+	`
+
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list orders by user: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]ordersrepo.Order, 0)
+	for rows.Next() {
+		var (
+			number     string
+			status     string
+			accrualStr *string
+			uploadedAt time.Time
+		)
+
+		// accrual в БД NUMERIC, поэтому безопасно сканим в строку и парсим.
+		if err := rows.Scan(&number, &status, &accrualStr, &uploadedAt); err != nil {
+			return nil, fmt.Errorf("scan order: %w", err)
+		}
+
+		var accrual *float64
+		if accrualStr != nil {
+			v, err := strconv.ParseFloat(*accrualStr, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parse accrual: %w", err)
+			}
+			accrual = &v
+		}
+
+		out = append(out, ordersrepo.Order{
+			Number:     number,
+			Status:     status,
+			Accrual:    accrual,
+			UploadedAt: uploadedAt,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return out, nil
 }

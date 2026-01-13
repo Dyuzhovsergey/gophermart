@@ -29,11 +29,11 @@ func NewRouter(deps Deps) http.Handler {
 		sr.Use(middleware.BearerAuth(deps.JWT))
 
 		ordersHandler := handlers.NewOrdersHandler(deps.Logger, deps.Orders)
-	sr.Post("/orders", ordersHandler.UploadOrder)
+		sr.Post("/orders", ordersHandler.UploadOrder)
+		sr.Get("/orders", ordersHandler.ListOrders)
 
-		// сюда добавим:
 		// sr.Post("/orders", ...) +
-		// sr.Get("/orders", ...)
+		// sr.Get("/orders", ...) +
 		// sr.Get("/balance", ...)
 		// sr.Post("/balance/withdraw", ...)
 		// sr.Get("/withdrawals", ...)
