@@ -2,7 +2,6 @@ package httpserver_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,47 +12,6 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/ordersrepo"
 )
-
-type fakeJWT struct {
-	userID int64
-	err    error
-}
-
-func (f *fakeJWT) Verify(tokenString string) (int64, error) {
-	if f.err != nil {
-		return 0, f.err
-	}
-	return f.userID, nil
-}
-
-type fakeAuth struct{}
-
-func (f *fakeAuth) Register(ctx context.Context, login, plainPassword string) (string, error) {
-	return "token", nil
-}
-
-func (f *fakeAuth) LoginBasic(ctx context.Context, login, plainPassword string) (string, error) {
-	return "token", nil
-}
-
-type fakeOrdersService struct {
-	uploadErr error
-	list      []ordersrepo.Order
-	listErr   error
-}
-
-func (f *fakeOrdersService) UploadOrder(ctx context.Context, userID int64, number string) error {
-	return f.uploadErr
-}
-
-func (f *fakeOrdersService) ListOrders(ctx context.Context, userID int64) ([]ordersrepo.Order, error) {
-	if f.listErr != nil {
-		return nil, f.listErr
-	}
-	return f.list, nil
-}
-
-// ---- тесты ----
 
 func TestPOST_UserOrders_NoToken_Returns401(t *testing.T) {
 	r := httpserver.NewRouter(httpserver.Deps{
