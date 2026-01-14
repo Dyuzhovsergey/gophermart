@@ -3,11 +3,15 @@ package httpserver_test
 import (
 	"context"
 
+	"github.com/Dyuzhovsergey/gophermart/internal/models"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/ordersrepo"
 )
 
 // ---- общие фейки для DI router_*_test.go) ----
+
+// domainerr
+var _ = domainerr.ErrUnauthorized
 
 type fakeJWT struct {
 	userID int64
@@ -60,5 +64,19 @@ func (f *fakeAuth) LoginBasic(ctx context.Context, login, plainPassword string) 
 	return f.loginToken, f.loginErr
 }
 
-// domainerr
-var _ = domainerr.ErrUnauthorized
+type fakeAccountsService struct {
+	current   float64
+	withdrawn float64
+	err       error
+}
+
+func (f *fakeAccountsService) ProvideAccount(ctx context.Context, userID int64) error {
+	return nil
+}
+
+func (f *fakeAccountsService) GetBalance(ctx context.Context, userID int64) (models.Balance, error) {
+	if f.err != nil {
+		return models.Balance{}, f.err
+	}
+	return models.Balance{Current: f.current, Withdrawn: f.withdrawn}, nil
+}
