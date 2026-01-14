@@ -24,7 +24,6 @@ func NewRouter(deps Deps) http.Handler {
 	r.Post("/api/user/login", authHandler.Login)
 
 	// Защищённая зона /api/user/*
-	// Сейчас тут может не быть ручек — добавим их в следующих инкрементах (orders/balance/withdrawals).
 	r.Route("/api/user", func(sr chi.Router) {
 		sr.Use(middleware.BearerAuth(deps.JWT))
 

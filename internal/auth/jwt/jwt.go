@@ -10,6 +10,8 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
+// curl -s -X POST http://localhost:8080/api/user/login -u sergey:qwerty
+
 var (
 	// ErrEmptySecret — пустой секрет для подписи JWT.
 	ErrEmptySecret = errors.New("empty jwt secret")
