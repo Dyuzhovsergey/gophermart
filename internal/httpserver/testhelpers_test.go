@@ -60,5 +60,5 @@ func (f *fakeAuth) LoginBasic(ctx context.Context, login, plainPassword string) 
 	return f.loginToken, f.loginErr
 }
 
-// Чтобы не импортить domainerr в каждом тесте (не обязательно, но удобно)
+// domainerr
 var _ = domainerr.ErrUnauthorized
