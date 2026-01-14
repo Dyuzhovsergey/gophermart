@@ -26,7 +26,6 @@ func NewOrdersHandler(log *zap.Logger, ordersSvc orders.Service) *OrdersHandler 
 func (h *OrdersHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userctx.UserID(r.Context())
 	if !ok {
-		// На практике сюда не должны попасть, т.к. Bearer middleware уже вернёт 401.
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -39,7 +38,7 @@ func (h *OrdersHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 
 	number := strings.TrimSpace(string(body))
 	if number == "" {
-		// Пустой номер — это неверный номер заказа.
+		// Пустой номер заказа.
 		http.Error(w, "unprocessable entity", http.StatusUnprocessableEntity)
 		return
 	}
