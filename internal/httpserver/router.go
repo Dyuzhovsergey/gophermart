@@ -32,9 +32,12 @@ func NewRouter(deps Deps) http.Handler {
 		sr.Post("/orders", ordersHandler.UploadOrder)
 		sr.Get("/orders", ordersHandler.ListOrders)
 
+		balanceHandler := handlers.NewBalanceHandler(deps.Logger, deps.Accounts)
+		sr.Get("/balance", balanceHandler.GetBalance)
+
 		// sr.Post("/orders", ...) +
 		// sr.Get("/orders", ...) +
-		// sr.Get("/balance", ...)
+		// sr.Get("/balance", ...) +
 		// sr.Post("/balance/withdraw", ...)
 		// sr.Get("/withdrawals", ...)
 	})

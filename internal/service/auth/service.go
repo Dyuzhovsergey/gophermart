@@ -21,14 +21,20 @@ type Service interface {
 	LoginBasic(ctx context.Context, login, plainPassword string) (string, error)
 }
 
+// AccountProvider — интерфейс для создания счёта пользователя.
+type AccountProvider interface {
+	ProvideAccount(ctx context.Context, userID int64) error
+}
+
 type service struct {
-	repo userrepo.Repository
-	jwt  TokenManager
+	repo     userrepo.Repository
+	jwt      TokenManager
+	accounts AccountProvider
 }
 
 // New создаёт сервис авторизации.
-func New(repo userrepo.Repository, jwt TokenManager) Service {
-	return &service{repo: repo, jwt: jwt}
+func New(repo userrepo.Repository, jwt TokenManager, accounts AccountProvider) Service {
+	return &service{repo: repo, jwt: jwt, accounts: accounts}
 }
 
 // Register регистрирует пользователя и возвращает JWT.
@@ -42,6 +48,13 @@ func (s *service) Register(ctx context.Context, login, plainPassword string) (st
 	id, err := s.repo.CreateUser(ctx, login, hash)
 	if err != nil {
 		return "", err
+	}
+
+	// Создаём счёт пользователя
+	if s.accounts != nil {
+		if err := s.accounts.ProvideAccount(ctx, id); err != nil {
+			return "", fmt.Errorf("ensure account: %w", err)
+		}
 	}
 
 	token, err := s.jwt.Generate(id)

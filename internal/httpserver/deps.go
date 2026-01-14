@@ -4,13 +4,15 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/middleware"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/accounts"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
 )
 
 type Deps struct {
-	Logger *zap.Logger
-	Auth   auth.Service
-	JWT    middleware.TokenVerifier
-	Orders orders.Service
+	Logger   *zap.Logger
+	Auth     auth.Service
+	JWT      middleware.TokenVerifier
+	Orders   orders.Service
+	Accounts accounts.Service
 }

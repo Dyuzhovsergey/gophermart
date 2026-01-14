@@ -11,6 +11,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
 	"github.com/Dyuzhovsergey/gophermart/internal/logger"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/accounts"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
@@ -69,17 +70,20 @@ func main() {
 	// ---------------- Репозитории ----------------
 	userRepo := postgres.NewUserRepository(pool)
 	ordersRepo := postgres.NewOrdersRepository(pool)
+	accountsRepo := postgres.NewAccountsRepository(pool)
 
 	// ---------------- Сервисы ----------------
+	accountsSvc := accounts.New(accountsRepo)
 	ordersSvc := orders.New(ordersRepo)
-	authSvc := auth.New(userRepo, jwtMgr)
+	authSvc := auth.New(userRepo, jwtMgr, accountsSvc)
 
 	// ---------------- HTTP Роутер ----------------
 	router := httpserver.NewRouter(httpserver.Deps{
-		Logger: log,
-		Auth:   authSvc,
-		JWT:    jwtMgr,
-		Orders: ordersSvc,
+		Logger:   log,
+		Auth:     authSvc,
+		JWT:      jwtMgr,
+		Orders:   ordersSvc,
+		Accounts: accountsSvc,
 	})
 
 	server := &http.Server{
