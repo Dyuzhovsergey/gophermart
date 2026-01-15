@@ -23,6 +23,7 @@ func Parse() *Config {
 		DefaultDatabaseURI          = ""
 		DefaultAccrualSystemAddress = ""
 
+		DefaultJWTSecret = "dev-secret"
 		DefaultJWTTTL = 24 * time.Hour
 	)
 
