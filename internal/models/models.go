@@ -28,7 +28,6 @@ type Balance struct {
 }
 
 // Withdrawal — списание средств пользователем.
-// В API поле называется "order" (по ТЗ), в БД колонка может называться order_number.
 type Withdrawal struct {
 	Order     string    `json:"order"`
 	Sum       float64   `json:"sum"`
