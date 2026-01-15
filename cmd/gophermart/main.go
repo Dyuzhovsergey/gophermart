@@ -59,7 +59,7 @@ func main() {
 
 	// ---------------- JWT менеджер ----------------
 
-	jwtMgr, err := authjwt.New(cfg.JWTSecret, 24*time.Hour)
+	jwtMgr, err := authjwt.New(cfg.JWTSecret, cfg.JWTTTL)
 	if err != nil {
 		log.Fatal("jwt init failed", zap.Error(err))
 	}
