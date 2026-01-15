@@ -31,7 +31,8 @@ func main() {
 	cfg := config.Parse()
 
 	if cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET is empty")
+		log.Warn("JWT_SECRET is empty, using default dev secret")
+		cfg.JWTSecret = "dev-secret"
 	}
 	if cfg.JWTTTL <= 0 {
 		log.Fatal("JWT_TTL must be positive", zap.String("jwt_ttl", cfg.JWTTTL.String()))
