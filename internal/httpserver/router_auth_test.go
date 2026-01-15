@@ -31,6 +31,10 @@ func TestPOST_Register_OK_Returns200AndTokenJSON(t *testing.T) {
 		t.Fatalf("want %d, got %d", http.StatusOK, w.Code)
 	}
 
+	if got := w.Header().Get("Authorization"); got != "Bearer token-123" {
+		t.Fatalf("want Authorization=%q, got %q", "Bearer token-123", got)
+	}
+
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("invalid json: %v", err)
@@ -143,6 +147,9 @@ func TestPOST_Login_OK_Returns200AndTokenJSON(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("want %d, got %d", http.StatusOK, w.Code)
 	}
+	if got := w.Header().Get("Authorization"); got != "Bearer token-xyz" {
+		t.Fatalf("want Authorization=%q, got %q", "Bearer token-xyz", got)
+	}
 
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
@@ -206,5 +213,28 @@ func TestPOST_Login_InternalError_Returns500(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("want %d, got %d", http.StatusInternalServerError, w.Code)
+	}
+}
+
+func TestPOST_Login_JSON_OK_Returns200AndTokenJSON(t *testing.T) {
+	r := httpserver.NewRouter(httpserver.Deps{
+		Logger: nil,
+		Auth:   &fakeAuth{loginToken: "token-json"},
+		JWT:    &fakeJWT{userID: 1},
+		Orders: &fakeOrdersService{},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/user/login",
+		bytes.NewBufferString(`{"login":"sergey","password":"qwerty"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want %d, got %d", http.StatusOK, w.Code)
+	}
+	if got := w.Header().Get("Authorization"); got != "Bearer token-json" {
+		t.Fatalf("want Authorization=%q, got %q", "Bearer token-json", got)
 	}
 }

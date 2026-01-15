@@ -59,13 +59,13 @@ func Parse() *Config {
 	flagDataBaseURI := flag.String("d", dbURI, "database uri")
 	flagAccrualSystemAddress := flag.String("r", accrualAddr, "accrual system address")
 	flagJWTSecret := flag.String("jwt-secret", jwtSecret, "jwt secret")
-	flagJWTTTL := flag.String("jwt-ttl", jwtTTL.String(), "jwt ttl (e.g. 24h, 30m)")
+	flagJWTTTL := flag.String("jwt-ttl", jwtTTL.String(), "jwt ttl")
 	flag.Parse()
 
 	// парсим ttl уже после флагов
 	parsedTTL, err := time.ParseDuration(*flagJWTTTL)
 	if err != nil {
-		parsedTTL = DefaultJWTTTL
+		parsedTTL = jwtTTL
 	}
 
 	return &Config{

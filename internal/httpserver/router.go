@@ -27,12 +27,16 @@ func NewRouter(deps Deps) http.Handler {
 	r.Route("/api/user", func(sr chi.Router) {
 		sr.Use(middleware.BearerAuth(deps.JWT))
 
-		ordersHandler := handlers.NewOrdersHandler(deps.Logger, deps.Orders)
-		sr.Post("/orders", ordersHandler.UploadOrder)
-		sr.Get("/orders", ordersHandler.ListOrders)
+		if deps.Orders != nil {
+			ordersHandler := handlers.NewOrdersHandler(deps.Logger, deps.Orders)
+			sr.Post("/orders", ordersHandler.UploadOrder)
+			sr.Get("/orders", ordersHandler.ListOrders)
+		}
 
-		balanceHandler := handlers.NewBalanceHandler(deps.Logger, deps.Accounts)
-		sr.Get("/balance", balanceHandler.GetBalance)
+		if deps.Accounts != nil {
+			balanceHandler := handlers.NewBalanceHandler(deps.Logger, deps.Accounts)
+			sr.Get("/balance", balanceHandler.GetBalance)
+		}
 
 		// sr.Post("/orders", ...) +
 		// sr.Get("/orders", ...) +

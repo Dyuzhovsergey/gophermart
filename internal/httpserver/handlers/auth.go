@@ -10,20 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// type AuthHandler struct {
-// 	log  *zap.Logger
-// 	auth auth.Service
-// }
-
-// type tokenResponse struct {
-// 	Token string `json:"token"`
-// }
-
-// type credentialsRequest struct {
-// 	Login    string `json:"login"`
-// 	Password string `json:"password"`
-// }
-
 type AuthHandler struct {
 	log  *zap.Logger
 	auth auth.Service
