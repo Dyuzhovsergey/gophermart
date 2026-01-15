@@ -24,14 +24,14 @@ func Parse() *Config {
 		DefaultAccrualSystemAddress = ""
 
 		DefaultJWTSecret = "dev-secret"
-		DefaultJWTTTL = 24 * time.Hour
+		DefaultJWTTTL    = 24 * time.Hour
 	)
 
 	// 1) берём дефолты
 	runAddr := DefaultRunAddress
 	dbURI := DefaultDatabaseURI
 	accrualAddr := DefaultAccrualSystemAddress
-	jwtSecret := ""
+	jwtSecret := DefaultJWTSecret
 	jwtTTL := DefaultJWTTTL
 
 	// 2) env переопределяет дефолты
@@ -58,7 +58,7 @@ func Parse() *Config {
 	flagRunAddr := flag.String("a", runAddr, "service run address (host:port)")
 	flagDataBaseURI := flag.String("d", dbURI, "database uri")
 	flagAccrualSystemAddress := flag.String("r", accrualAddr, "accrual system address")
-	flagJWTSecret := flag.String("jwt-secret", jwtSecret, "jwt secret (required)")
+	flagJWTSecret := flag.String("jwt-secret", jwtSecret, "jwt secret")
 	flagJWTTTL := flag.String("jwt-ttl", jwtTTL.String(), "jwt ttl (e.g. 24h, 30m)")
 	flag.Parse()
 
