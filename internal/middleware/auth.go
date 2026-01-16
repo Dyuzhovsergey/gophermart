@@ -16,8 +16,7 @@ type TokenVerifier interface {
 // BearerAuth проверяет Authorization: Bearer <token> и кладёт userID в context.
 // Если заголовка нет или токен невалидный — возвращает 401.
 func BearerAuth(verifier TokenVerifier) func(http.Handler) http.Handler {
-	// Если verifier не передали — считаем, что авторизация невозможна.
-	// Лучше сразу отдавать 401, чем пропускать запросы без проверки.
+	// Если verifier не передали — считаем, что авторизация невозможна. 401
 	if verifier == nil {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
