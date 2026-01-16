@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver/userctx"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/accounts"
-	"go.uber.org/zap"
 )
 
 type BalanceHandler struct {
