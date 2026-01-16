@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	authjwt "github.com/Dyuzhovsergey/gophermart/internal/auth/jwt"
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
@@ -15,6 +16,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
+	"github.com/Dyuzhovsergey/gophermart/internal/worker"
 
 	"go.uber.org/zap"
 )
@@ -87,6 +89,14 @@ func main() {
 		Addr:    cfg.RunAddress,
 		Handler: router,
 	}
+	// ---------------- Accrual client + Worker ----------------
+	acClient, err := accrual.New(cfg.AccrualSystemAddress)
+	if err != nil {
+		log.Fatal("accrual client init failed", zap.Error(err))
+	}
+
+	w := worker.New(log, ordersRepo, acClient, 1*time.Second, 5)
+	go w.Run(rootCtx)
 
 	// ---------------- Запуск HTTP-сервера ----------------
 	go func() {

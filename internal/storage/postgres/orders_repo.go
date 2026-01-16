@@ -10,6 +10,8 @@ import (
 
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/ordersrepo"
+	"github.com/Dyuzhovsergey/gophermart/internal/worker"
+
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,11 +24,6 @@ type OrdersRepository struct {
 // NewOrdersRepository создаёт репозиторий заказов.
 func NewOrdersRepository(pool *pgxpool.Pool) *OrdersRepository {
 	return &OrdersRepository{pool: pool}
-}
-
-// OrderForWorker — минимальные данные заказа для воркера.
-type OrderForWorker struct {
-	Number string
 }
 
 // AddOrder добавляет заказ с начальным статусом NEW.
@@ -130,7 +127,7 @@ func (r *OrdersRepository) ListOrdersByUser(ctx context.Context, userID int64) (
 }
 
 // PickForProcessing выбирает заказы со статусом NEW или PROCESSING.
-func (r *OrdersRepository) PickForProcessing(ctx context.Context, limit int) ([]OrderForWorker, error) {
+func (r *OrdersRepository) PickForProcessing(ctx context.Context, limit int) ([]worker.OrderForWork, error) {
 	const q = `
 		SELECT number
 		FROM orders
@@ -145,13 +142,13 @@ func (r *OrdersRepository) PickForProcessing(ctx context.Context, limit int) ([]
 	}
 	defer rows.Close()
 
-	out := make([]OrderForWorker, 0)
+	out := make([]worker.OrderForWork, 0)
 	for rows.Next() {
 		var n string
 		if err := rows.Scan(&n); err != nil {
 			return nil, fmt.Errorf("scan order: %w", err)
 		}
-		out = append(out, OrderForWorker{Number: n})
+		out = append(out, worker.OrderForWork{Number: n})
 	}
 
 	if err := rows.Err(); err != nil {
