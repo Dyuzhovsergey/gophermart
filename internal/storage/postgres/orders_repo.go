@@ -159,7 +159,6 @@ func (r *OrdersRepository) PickForProcessing(ctx context.Context, limit int) ([]
 }
 
 // ApplyAccrualResult обновляет статус заказа и, если нужно, начисляет баллы на счёт.
-// Важно: начисление происходит только один раз — если в orders.accrual было NULL.
 func (r *OrdersRepository) ApplyAccrualResult(ctx context.Context, number string, status string, accrual *float64) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

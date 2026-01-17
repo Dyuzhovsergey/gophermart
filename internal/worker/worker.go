@@ -105,7 +105,7 @@ func (w *Worker) tick(ctx context.Context) {
 			continue
 		}
 
-		// Маппинг статусов accrual -> статусы Гофермарт.
+		// Маппинг статусов accrual -> статусы  Gophermart.
 		status := mapAccrualStatus(o.Status)
 
 		if err := w.orders.ApplyAccrualResult(ctx, it.Number, status, o.Accrual); err != nil {
@@ -126,7 +126,6 @@ func mapAccrualStatus(s string) string {
 	case "PROCESSING", "REGISTERED":
 		return "PROCESSING"
 	default:
-		// На всякий случай — считаем, что ещё в обработке.
 		return "PROCESSING"
 	}
 }
