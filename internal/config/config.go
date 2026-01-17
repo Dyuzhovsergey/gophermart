@@ -21,7 +21,7 @@ func Parse() *Config {
 	const (
 		DefaultRunAddress           = "localhost:8080"
 		DefaultDatabaseURI          = ""
-		DefaultAccrualSystemAddress = ""
+		DefaultAccrualSystemAddress = "localhost:8081"
 
 		DefaultJWTSecret = "dev-secret"
 		DefaultJWTTTL    = 24 * time.Hour
