@@ -33,7 +33,7 @@ func New(addr string) (*Client, error) {
 		return nil, fmt.Errorf("accrual address is empty")
 	}
 
-	// Если схемы нет — добавим http://
+	// Добавляем http://
 	if !strings.HasPrefix(addr, "http://") && !strings.HasPrefix(addr, "https://") {
 		addr = "http://" + addr
 	}
@@ -80,7 +80,6 @@ func (c *Client) GetOrder(ctx context.Context, number string) (order *Order, ret
 		return nil, nil, nil
 
 	case http.StatusTooManyRequests:
-		// Retry-After в секундах (по ТЗ).
 		ra := resp.Header.Get("Retry-After")
 		if ra == "" {
 			d := 60 * time.Second

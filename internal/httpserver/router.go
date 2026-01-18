@@ -38,6 +38,12 @@ func NewRouter(deps Deps) http.Handler {
 			sr.Get("/balance", balanceHandler.GetBalance)
 		}
 
+		if deps.Withdrawals != nil {
+			withdrawHandler := handlers.NewWithdrawHandler(deps.Logger, deps.Withdrawals)
+			sr.Post("/balance/withdraw", withdrawHandler.Withdraw)
+			sr.Get("/withdrawals", withdrawHandler.ListWithdrawals)
+		}
+
 		// sr.Post("/orders", ...) +
 		// sr.Get("/orders", ...) +
 		// sr.Get("/balance", ...) +
