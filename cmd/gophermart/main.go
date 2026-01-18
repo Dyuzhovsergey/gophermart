@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	authjwt "github.com/Dyuzhovsergey/gophermart/internal/auth/jwt"
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
@@ -15,6 +14,9 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/service/accounts"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/withdrawals"
+
+	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
 	"github.com/Dyuzhovsergey/gophermart/internal/worker"
 
@@ -70,19 +72,22 @@ func main() {
 	userRepo := postgres.NewUserRepository(pool)
 	ordersRepo := postgres.NewOrdersRepository(pool)
 	accountsRepo := postgres.NewAccountsRepository(pool)
+	withdrawalsRepo := postgres.NewWithdrawalsRepository(pool)
 
 	// ---------------- Сервисы ----------------
 	accountsSvc := accounts.New(accountsRepo)
 	ordersSvc := orders.New(ordersRepo)
 	authSvc := auth.New(userRepo, jwtMgr, accountsSvc)
+	withdrawalsSvc := withdrawals.New(withdrawalsRepo)
 
 	// ---------------- HTTP Роутер ----------------
 	router := httpserver.NewRouter(httpserver.Deps{
-		Logger:   log,
-		Auth:     authSvc,
-		JWT:      jwtMgr,
-		Orders:   ordersSvc,
-		Accounts: accountsSvc,
+		Logger:      log,
+		Auth:        authSvc,
+		JWT:         jwtMgr,
+		Orders:      ordersSvc,
+		Accounts:    accountsSvc,
+		Withdrawals: withdrawalsSvc,
 	})
 
 	server := &http.Server{
