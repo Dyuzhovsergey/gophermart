@@ -36,11 +36,10 @@ func NewWithdrawHandler(log *zap.Logger, svc withdrawals.Service) *WithdrawHandl
 }
 
 // Withdraw — POST /api/user/balance/withdraw.
-// Читает JSON {"order": "...", "sum": ...}, списывает средства с баланса.
+// Читает JSON, списывает средства с баланса.
 func (h *WithdrawHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userctx.UserID(r.Context())
 	if !ok {
-		// На практике сюда не должны попадать, потому что Bearer middleware уже отсекает.
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
@@ -53,7 +52,7 @@ func (h *WithdrawHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	req.Order = strings.TrimSpace(req.Order)
 	if req.Order == "" || req.Sum <= 0 {
-		// По ТЗ 422 только за неверный номер заказа.
+		// По 422 только за неверный номер заказа.
 		// Для неверной суммы — разумно 400.
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
@@ -61,8 +60,6 @@ func (h *WithdrawHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	err := h.svc.Withdraw(r.Context(), userID, req.Order, req.Sum)
 	if err != nil {
-		// Если сервис вернул "invalid order" — маппим в 422.
-		// Остальные доменные ошибки — через общий маппер.
 		status := httperrors.MapErrorToStatus(err)
 		http.Error(w, http.StatusText(status), status)
 		return
@@ -95,7 +92,6 @@ func (h *WithdrawHandler) ListWithdrawals(w http.ResponseWriter, r *http.Request
 	resp := make([]withdrawalResponseItem, 0, len(items))
 	for _, it := range items {
 		processedAt := it.ProcessedAt
-		// На всякий случай: если вдруг нулевое время (не должно быть), ставим текущее.
 		if processedAt.IsZero() {
 			processedAt = time.Now()
 		}
@@ -112,5 +108,4 @@ func (h *WithdrawHandler) ListWithdrawals(w http.ResponseWriter, r *http.Request
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// Небольшая "страховка": если где-то ошибочно вернутся не те ошибки.
 var _ = domainerr.ErrNoFunds

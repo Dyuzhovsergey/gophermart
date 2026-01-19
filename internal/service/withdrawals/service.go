@@ -28,7 +28,7 @@ func (s *service) Withdraw(ctx context.Context, userID int64, order string, sum 
 		return domainerr.ErrInvalidOrder
 	}
 	if sum <= 0 {
-		// В ТЗ нет отдельного кода для неверной суммы — можно считать bad request на уровне хендлера.
+		//  bad request на уровне хендлера.
 		return domainerr.ErrConflict
 	}
 	return s.repo.Withdraw(ctx, userID, order, sum)

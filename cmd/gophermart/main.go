@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	authjwt "github.com/Dyuzhovsergey/gophermart/internal/auth/jwt"
 	"github.com/Dyuzhovsergey/gophermart/internal/config"
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
@@ -15,8 +16,6 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/service/auth"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/withdrawals"
-
-	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	"github.com/Dyuzhovsergey/gophermart/internal/storage/postgres"
 	"github.com/Dyuzhovsergey/gophermart/internal/worker"
 
@@ -46,7 +45,13 @@ func main() {
 	connectCtx, cancelConnect := context.WithTimeout(rootCtx, 5*time.Second)
 	defer cancelConnect()
 
-	pool, err := postgres.Connect(connectCtx, cfg.DatabaseURI, log)
+	pool, err := postgres.Connect(connectCtx, cfg.DatabaseURI, log, postgres.PoolSettings{
+		MaxConns:          cfg.DBMaxConns,
+		MinConns:          cfg.DBMinConns,
+		MaxConnLifetime:   cfg.DBMaxConnLifetime,
+		MaxConnIdleTime:   cfg.DBMaxConnIdleTime,
+		HealthCheckPeriod: cfg.DBHealthCheckPeriod,
+	})
 	if err != nil {
 		log.Fatal("db connect failed", zap.Error(err))
 	}
@@ -94,14 +99,17 @@ func main() {
 		Addr:    cfg.RunAddress,
 		Handler: router,
 	}
-	// ---------------- Accrual client + Worker ----------------
-	acClient, err := accrual.New(cfg.AccrualSystemAddress)
-	if err != nil {
-		log.Fatal("accrual client init failed", zap.Error(err))
+	// ---------------- Accrual клиент + Worker ----------------
+	if cfg.AccrualSystemAddress == "" {
+		log.Warn("ACCRUAL_SYSTEM_ADDRESS is empty: worker disabled")
+	} else {
+		accrualClient, err := accrual.New(cfg.AccrualSystemAddress)
+		if err != nil {
+			log.Fatal("accrual client init failed", zap.Error(err))
+		}
+		w := worker.New(log, ordersRepo, accrualClient, 1*time.Second, 5)
+		go w.Run(rootCtx)
 	}
-
-	w := worker.New(log, ordersRepo, acClient, 1*time.Second, 5)
-	go w.Run(rootCtx)
 
 	// ---------------- Запуск HTTP-сервера ----------------
 	go func() {

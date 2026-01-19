@@ -11,24 +11,24 @@ import (
 func MapErrorToStatus(err error) int {
 	switch err {
 	case domainerr.ErrUnauthorized:
-		return http.StatusUnauthorized
+		return http.StatusUnauthorized // // 401
 
 	case domainerr.ErrConflict, domainerr.ErrAlreadyUploadedByAnother:
-		return http.StatusConflict
+		return http.StatusConflict // 409
 
 	case domainerr.ErrInvalidOrder:
-		return http.StatusUnprocessableEntity
+		return http.StatusUnprocessableEntity // 422
 
 	case domainerr.ErrNoFunds:
-		return http.StatusPaymentRequired
+		return http.StatusPaymentRequired // 402
 
 	case domainerr.ErrOrderNotFound:
-		return http.StatusNotFound
+		return http.StatusNotFound // 404
 
 	case domainerr.ErrAlreadyUploadedByUser:
-		return http.StatusOK
+		return http.StatusOK // 200
 
 	default:
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError // 500
 	}
 }

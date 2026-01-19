@@ -43,12 +43,6 @@ func NewRouter(deps Deps) http.Handler {
 			sr.Post("/balance/withdraw", withdrawHandler.Withdraw)
 			sr.Get("/withdrawals", withdrawHandler.ListWithdrawals)
 		}
-
-		// sr.Post("/orders", ...) +
-		// sr.Get("/orders", ...) +
-		// sr.Get("/balance", ...) +
-		// sr.Post("/balance/withdraw", ...)
-		// sr.Get("/withdrawals", ...)
 	})
 
 	return r

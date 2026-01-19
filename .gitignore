@@ -8,6 +8,7 @@
 # Build script
 build_app.sh
 accrual_start.sh 
+comnnect.md
 
 # Test binary, built with `go test -c`
 *.test

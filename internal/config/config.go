@@ -8,12 +8,19 @@ import (
 )
 
 type Config struct {
+	// Addr
 	RunAddress           string
 	DatabaseURI          string
 	AccrualSystemAddress string
-
+	// JWT
 	JWTSecret string
 	JWTTTL    time.Duration
+	// Postgres pool
+	DBMaxConns          int32
+	DBMinConns          int32
+	DBMaxConnLifetime   time.Duration
+	DBMaxConnIdleTime   time.Duration
+	DBHealthCheckPeriod time.Duration
 }
 
 func Parse() *Config {
@@ -25,14 +32,27 @@ func Parse() *Config {
 
 		DefaultJWTSecret = "dev-secret"
 		DefaultJWTTTL    = 24 * time.Hour
+
+		DefaultDBMaxConns          int32 = 10
+		DefaultDBMinConns          int32 = 1
+		DefaultDBMaxConnLifetime         = 30 * time.Minute
+		DefaultDBMaxConnIdleTime         = 5 * time.Minute
+		DefaultDBHealthCheckPeriod       = 30 * time.Second
 	)
 
 	// 1) берём дефолты
 	runAddr := DefaultRunAddress
 	dbURI := DefaultDatabaseURI
 	accrualAddr := DefaultAccrualSystemAddress
+
 	jwtSecret := DefaultJWTSecret
 	jwtTTL := DefaultJWTTTL
+
+	dbMaxConns := DefaultDBMaxConns
+	dbMinConns := DefaultDBMinConns
+	dbMaxConnLifetime := DefaultDBMaxConnLifetime
+	dbMaxConnIdleTime := DefaultDBMaxConnIdleTime
+	dbHealthCheckPeriod := DefaultDBHealthCheckPeriod
 
 	// 2) env переопределяет дефолты
 	if v := os.Getenv("RUN_ADDRESS"); v != "" {
@@ -74,5 +94,11 @@ func Parse() *Config {
 		AccrualSystemAddress: *flagAccrualSystemAddress,
 		JWTSecret:            *flagJWTSecret,
 		JWTTTL:               parsedTTL,
+
+		DBMaxConns:          dbMaxConns,
+		DBMinConns:          dbMinConns,
+		DBMaxConnLifetime:   dbMaxConnLifetime,
+		DBMaxConnIdleTime:   dbMaxConnIdleTime,
+		DBHealthCheckPeriod: dbHealthCheckPeriod,
 	}
 }

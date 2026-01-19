@@ -50,7 +50,7 @@ func (h *OrdersHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Если заказ уже загружен этим пользователем — по ТЗ 200 OK.
+	// Если заказ уже загружен этим пользователем — 200 OK.
 	if err == domainerr.ErrAlreadyUploadedByUser {
 		w.WriteHeader(http.StatusOK)
 		return
