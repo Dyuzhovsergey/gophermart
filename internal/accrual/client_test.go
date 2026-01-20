@@ -30,7 +30,7 @@ func TestGetOrder_OK200_ReturnsOrder(t *testing.T) {
 	number := "79927398713"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Проверяем, что клиент бьёт в правильный эндпоинт.
+		// правильный эндпоинт.
 		if r.Method != http.MethodGet {
 			t.Fatalf("want method GET, got %s", r.Method)
 		}
@@ -133,7 +133,6 @@ func TestGetOrder_TooManyRequests429_WithoutRetryAfterHeader_UsesDefault(t *test
 	number := "123"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Без Retry-After — клиент должен взять дефолт 60s.
 		w.WriteHeader(http.StatusTooManyRequests)
 	}))
 	defer srv.Close()

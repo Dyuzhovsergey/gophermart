@@ -46,6 +46,6 @@ func CheckPassword(hash, password string) (bool, error) {
 		return false, nil // пароль не подходит
 	}
 
-	// Остальные ошибки (например, битый формат хеша) — возвращаем как err.
+	// Остальные ошибки возвращаем как err.
 	return false, err
 }

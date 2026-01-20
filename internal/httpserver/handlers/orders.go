@@ -9,6 +9,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver/userctx"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/orders"
+
 	"go.uber.org/zap"
 )
 
@@ -60,7 +61,7 @@ func (h *OrdersHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	status := httperrors.MapErrorToStatus(err)
 	http.Error(w, http.StatusText(status), status)
 
-	// Небольшой лог для диагностики.
+	// Лог для диагностики.
 	if status >= 500 && h.log != nil {
 		h.log.Error("upload order failed", zap.Error(err))
 	}

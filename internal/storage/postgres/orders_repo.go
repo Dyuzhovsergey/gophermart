@@ -27,7 +27,6 @@ func NewOrdersRepository(pool *pgxpool.Pool) *OrdersRepository {
 }
 
 // AddOrder добавляет заказ с начальным статусом NEW.
-// Уникальность обеспечивается PK orders.number.
 func (r *OrdersRepository) AddOrder(ctx context.Context, userID int64, number string) error {
 	// 1) Быстрая проверка: существует ли заказ и чей он
 	const qSel = `
@@ -56,8 +55,6 @@ func (r *OrdersRepository) AddOrder(ctx context.Context, userID int64, number st
 		return nil
 	}
 
-	// Возможна гонка: другой запрос вставил заказ между SELECT и INSERT.
-	// Тогда ловим unique violation и повторяем проверку владельца.
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		err2 := r.pool.QueryRow(ctx, qSel, number).Scan(&existingUserID)
@@ -180,7 +177,7 @@ func (r *OrdersRepository) ApplyAccrualResult(ctx context.Context, number string
 		return fmt.Errorf("select order for update: %w", err)
 	}
 
-	// Обновляем статус (и accrual, если пришёл).
+	// Обновляем статус и accrual.
 	// Если accrual == nil, оставляем как есть.
 	if accrual == nil {
 		const qUpd = `UPDATE orders SET status = $2 WHERE number = $1;`

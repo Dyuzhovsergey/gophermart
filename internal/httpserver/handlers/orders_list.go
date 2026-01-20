@@ -12,12 +12,11 @@ import (
 )
 
 // orderResponse
-// uploaded_at должен быть в формате RFC3339.
 type orderResponse struct {
 	Number     string   `json:"number"`
 	Status     string   `json:"status"`
 	Accrual    *float64 `json:"accrual,omitempty"`
-	UploadedAt string   `json:"uploaded_at"`
+	UploadedAt string   `json:"uploaded_at"`  // в формате RFC3339.
 }
 
 func (h *OrdersHandler) ListOrders(w http.ResponseWriter, r *http.Request) {

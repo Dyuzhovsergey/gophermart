@@ -19,7 +19,6 @@ func (f *fakeRepo) AddOrder(ctx context.Context, userID int64, number string) er
 }
 
 func (f *fakeRepo) ListOrdersByUser(ctx context.Context, userID int64) ([]ordersrepo.Order, error) {
-	// В этом тесте не используется — возвращаем пусто.
 	return nil, nil
 }
 

@@ -55,7 +55,7 @@ func TestManager_Verify_Expired(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	// “перематываем” время дальше exp
+	// перематываем время дальше exp
 	ver.now = func() time.Time { return issuedAt.Add(2 * time.Hour) }
 
 	_, err = ver.Verify(token)

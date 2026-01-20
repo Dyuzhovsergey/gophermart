@@ -26,7 +26,6 @@ type Client struct {
 }
 
 // New создаёт клиента accrual.
-// addr может быть вида "localhost:8081" или "http://localhost:8081".
 func New(addr string) (*Client, error) {
 	addr = strings.TrimSpace(addr)
 	if addr == "" {

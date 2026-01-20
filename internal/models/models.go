@@ -4,16 +4,14 @@ package models
 import "time"
 
 // User — доменная модель пользователя.
-// Логин уникальный, пароль хранится в виде хеша.
 type User struct {
 	ID        int64     `json:"-"`
-	Login     string    `json:"login"`
-	Password  string    `json:"password"`
+	Login     string    `json:"login"`    // login уникальный
+	Password  string    `json:"password"` // хеш
 	CreatedAt time.Time `json:"-"`
 }
 
 // Order — заказ пользователя в системе лояльности.
-// Статус и начисления приходят из внешней системы.
 type Order struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`

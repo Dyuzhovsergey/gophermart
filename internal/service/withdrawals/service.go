@@ -23,12 +23,12 @@ func New(repo withdrawalsrepo.Repository) Service {
 }
 
 func (s *service) Withdraw(ctx context.Context, userID int64, order string, sum float64) error {
-	// Валидация номера заказа — используем ту же, что и для orders (если у тебя уже есть).
+	// Валидация номера заказа
 	if err := orders.ValidateOrderNumber(order); err != nil {
 		return domainerr.ErrInvalidOrder
 	}
 	if sum <= 0 {
-		//  bad request на уровне хендлера.
+		//  bad request
 		return domainerr.ErrConflict
 	}
 	return s.repo.Withdraw(ctx, userID, order, sum)

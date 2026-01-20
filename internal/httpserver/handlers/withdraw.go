@@ -69,7 +69,6 @@ func (h *WithdrawHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListWithdrawals — GET /api/user/withdrawals.
-// Возвращает список списаний или 204, если списаний нет.
 func (h *WithdrawHandler) ListWithdrawals(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userctx.UserID(r.Context())
 	if !ok {
@@ -85,11 +84,11 @@ func (h *WithdrawHandler) ListWithdrawals(w http.ResponseWriter, r *http.Request
 	}
 
 	if len(items) == 0 {
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)  // 204
 		return
 	}
 
-	resp := make([]withdrawalResponseItem, 0, len(items))
+	resp := make([]withdrawalResponseItem, 0, len(items)) // список списаний
 	for _, it := range items {
 		processedAt := it.ProcessedAt
 		if processedAt.IsZero() {

@@ -29,7 +29,7 @@ func (w *statusWriter) Write(p []byte) (int, error) {
 }
 
 func Logger(l *zap.Logger) func(http.Handler) http.Handler {
-	// если логгер не передали — просто пропускаем
+	// если логгер не передали — пропускаем
 	if l == nil {
 		return func(next http.Handler) http.Handler { return next }
 	}

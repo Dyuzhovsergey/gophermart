@@ -100,7 +100,7 @@ func (w *Worker) tick(ctx context.Context) {
 			return
 		}
 
-		// 204 — заказа ещё нет в accrual: просто пропускаем.
+		// 204 — заказа ещё нет в accrual: пропускаем.
 		if o == nil {
 			continue
 		}

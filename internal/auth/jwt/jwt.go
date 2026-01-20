@@ -15,10 +15,13 @@ import (
 var (
 	// ErrEmptySecret — пустой секрет для подписи JWT.
 	ErrEmptySecret = errors.New("empty jwt secret")
+
 	// ErrEmptyToken — пустая строка токена.
 	ErrEmptyToken = errors.New("empty jwt token")
+
 	// ErrInvalidToken — невалидный токен (формат/подпись/claims).
 	ErrInvalidToken = errors.New("invalid jwt token")
+
 	// ErrExpiredToken — токен просрочен.
 	ErrExpiredToken = errors.New("jwt token expired")
 )
@@ -89,7 +92,7 @@ func (m *Manager) Verify(tokenString string) (int64, error) {
 		jwtlib.WithTimeFunc(m.now),
 	)
 	if err != nil {
-		// Просрочка токена — отдельный кейс
+		// Просрочка токена
 		if errors.Is(err, jwtlib.ErrTokenExpired) {
 			return 0, ErrExpiredToken
 		}
