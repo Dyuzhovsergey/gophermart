@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/withdrawalsrepo"
@@ -76,14 +78,31 @@ func (r *WithdrawalsRepository) ListWithdrawals(ctx context.Context, userID int6
 	}
 	defer rows.Close()
 
-	var out []withdrawalsrepo.Withdrawal
+	out := make([]withdrawalsrepo.Withdrawal, 0)
 	for rows.Next() {
-		var w withdrawalsrepo.Withdrawal
-		if err := rows.Scan(&w.Order, &w.Sum, &w.ProcessedAt); err != nil {
+		var (
+			order       string
+			sumStr      string
+			processedAt time.Time
+		)
+
+		// sum (NUMERIC) сканим в строку
+		if err := rows.Scan(&order, &sumStr, &processedAt); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
-		out = append(out, w)
+
+		sum, err := strconv.ParseFloat(sumStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("parse sum: %w", err)
+		}
+
+		out = append(out, withdrawalsrepo.Withdrawal{
+			Order:       order,
+			Sum:         sum,
+			ProcessedAt: processedAt,
+		})
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows: %w", err)
 	}

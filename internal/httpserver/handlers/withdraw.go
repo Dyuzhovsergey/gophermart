@@ -53,7 +53,7 @@ func (h *WithdrawHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	req.Order = strings.TrimSpace(req.Order)
 	if req.Order == "" || req.Sum <= 0 {
 		// По 422 только за неверный номер заказа.
-		// Для неверной суммы — разумно 400.
+		// Для неверной суммы — 400.
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
@@ -84,21 +84,16 @@ func (h *WithdrawHandler) ListWithdrawals(w http.ResponseWriter, r *http.Request
 	}
 
 	if len(items) == 0 {
-		w.WriteHeader(http.StatusNoContent)  // 204
+		w.WriteHeader(http.StatusNoContent) // 204
 		return
 	}
 
 	resp := make([]withdrawalResponseItem, 0, len(items)) // список списаний
 	for _, it := range items {
-		processedAt := it.ProcessedAt
-		if processedAt.IsZero() {
-			processedAt = time.Now()
-		}
-
 		resp = append(resp, withdrawalResponseItem{
 			Order:       it.Order,
 			Sum:         it.Sum,
-			ProcessedAt: processedAt.Format(time.RFC3339),
+			ProcessedAt: it.ProcessedAt.Format(time.RFC3339),
 		})
 	}
 
