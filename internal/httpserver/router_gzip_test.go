@@ -15,7 +15,6 @@ import (
 func TestRouter_GzipMiddleware_CompressesResponseWhenAccepted(t *testing.T) {
 	r := httpserver.NewRouter(httpserver.Deps{
 		Logger: nil,
-		// остальные зависимости не нужны для /health
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
