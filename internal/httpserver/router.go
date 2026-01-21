@@ -15,6 +15,7 @@ func NewRouter(deps Deps) http.Handler {
 
 	r.Use(middleware.Recover(deps.Logger))
 	r.Use(middleware.Logger(deps.Logger))
+	r.Use(middleware.Gzip)
 
 	r.Get("/health", handlers.Health)
 
