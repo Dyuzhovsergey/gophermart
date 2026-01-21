@@ -1,4 +1,4 @@
-// Package middleware содержит middleware приложения.
+// Package middleware contains middleware app.
 package middleware
 
 import (
@@ -36,14 +36,14 @@ func Gzip(next http.Handler) http.Handler {
 			return
 		}
 
-		// Не сжимаем при Upgrade (например websocket).
+		// Не сжимаем при Upgrade
 		if strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade") ||
 			strings.ToLower(r.Header.Get("Upgrade")) != "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Если кто-то уже выставил Content-Encoding — не вмешиваемся.
+		// Если кто-то уже выставил Content-Encoding — ничего не делаем.
 		if w.Header().Get("Content-Encoding") != "" {
 			next.ServeHTTP(w, r)
 			return
@@ -90,7 +90,6 @@ func addVaryAcceptEncoding(h http.Header) {
 }
 
 // gzipResponseWriter пишет тело ответа в gzip.Writer.
-// Важно: некоторые ответы по стандарту не должны иметь тела (204/304) — их не сжимаем.
 type gzipResponseWriter struct {
 	http.ResponseWriter
 	gw          *gzip.Writer
