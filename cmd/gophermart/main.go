@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -26,7 +28,8 @@ func main() {
 	// ---------------- Инициализация логгера ----------------
 	log, err := logger.Init()
 	if err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, "cannot initialize logger:", err)
+		os.Exit(1)
 	}
 	defer func() { _ = log.Sync() }()
 

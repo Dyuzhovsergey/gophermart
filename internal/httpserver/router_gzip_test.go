@@ -11,7 +11,7 @@ import (
 	"github.com/Dyuzhovsergey/gophermart/internal/httpserver"
 )
 
-// Тест на уровне роутера: middleware.Gzip реально подключён в NewRouter().
+// Тест на уровне роутера
 func TestRouter_GzipMiddleware_CompressesResponseWhenAccepted(t *testing.T) {
 	r := httpserver.NewRouter(httpserver.Deps{
 		Logger: nil,
