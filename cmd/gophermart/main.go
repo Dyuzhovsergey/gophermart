@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
 	authjwt "github.com/Dyuzhovsergey/gophermart/internal/auth/jwt"
@@ -45,7 +44,7 @@ func main() {
 	defer stop()
 
 	// ---------------- Подключение к Postgres ----------------
-	dbCtx, cancelDB := context.WithTimeout(rootCtx, 5*time.Second)
+	dbCtx, cancelDB := context.WithTimeout(rootCtx, cfg.DBConnectTimeout)
 	defer cancelDB()
 
 	pool, err := postgres.Open(dbCtx, cfg.DatabaseURI, log, postgres.PoolSettings{
@@ -101,7 +100,7 @@ func main() {
 		if err != nil {
 			log.Fatal("accrual client init failed", zap.Error(err))
 		}
-		w := worker.New(log, ordersRepo, accrualClient, 1*time.Second, 5)
+		w := worker.New(log, ordersRepo, accrualClient, cfg.WorkerInterval, cfg.WorkerBatchSize)
 		go w.Run(rootCtx)
 	}
 
@@ -118,7 +117,7 @@ func main() {
 	log.Info("shutting down")
 
 	// ---------------- Корректное завершение HTTP-сервера ----------------
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTPShutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown error", zap.Error(err))

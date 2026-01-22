@@ -4,6 +4,7 @@ package config
 import (
 	"flag"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -12,15 +13,23 @@ type Config struct {
 	RunAddress           string
 	DatabaseURI          string
 	AccrualSystemAddress string
+
 	// JWT
 	JWTSecret string
 	JWTTTL    time.Duration
+
 	// Postgres pool
 	DBMaxConns          int32
 	DBMinConns          int32
 	DBMaxConnLifetime   time.Duration
 	DBMaxConnIdleTime   time.Duration
 	DBHealthCheckPeriod time.Duration
+
+	// Тайминги приложения
+	DBConnectTimeout    time.Duration
+	HTTPShutdownTimeout time.Duration
+	WorkerInterval      time.Duration
+	WorkerBatchSize     int
 }
 
 func Parse() *Config {
@@ -38,6 +47,11 @@ func Parse() *Config {
 		DefaultDBMaxConnLifetime         = 30 * time.Minute
 		DefaultDBMaxConnIdleTime         = 5 * time.Minute
 		DefaultDBHealthCheckPeriod       = 30 * time.Second
+
+		DefaultDBConnectTimeout    = 5 * time.Second
+		DefaultHTTPShutdownTimeout = 5 * time.Second
+		DefaultWorkerInterval      = 1 * time.Second
+		DefaultWorkerBatchSize     = 5
 	)
 
 	// 1) берём дефолты
@@ -53,6 +67,11 @@ func Parse() *Config {
 	dbMaxConnLifetime := DefaultDBMaxConnLifetime
 	dbMaxConnIdleTime := DefaultDBMaxConnIdleTime
 	dbHealthCheckPeriod := DefaultDBHealthCheckPeriod
+
+	dbConnectTimeout := DefaultDBConnectTimeout
+	httpShutdownTimeout := DefaultHTTPShutdownTimeout
+	workerInterval := DefaultWorkerInterval
+	workerBatchSize := DefaultWorkerBatchSize
 
 	// 2) env переопределяет дефолты
 	if v := os.Getenv("RUN_ADDRESS"); v != "" {
@@ -73,14 +92,57 @@ func Parse() *Config {
 			jwtTTL = ttl
 		}
 	}
+	if v := os.Getenv("DB_CONNECT_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			dbConnectTimeout = d
+		}
+	}
+
+	if v := os.Getenv("HTTP_SHUTDOWN_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			httpShutdownTimeout = d
+		}
+	}
+
+	if v := os.Getenv("WORKER_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			workerInterval = d
+		}
+	}
+
+	if v := os.Getenv("WORKER_BATCH_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			workerBatchSize = n
+		}
+	}
 
 	// 3) flags переопределяют env/def
 	flagRunAddr := flag.String("a", runAddr, "service run address (host:port)")
 	flagDataBaseURI := flag.String("d", dbURI, "database uri")
 	flagAccrualSystemAddress := flag.String("r", accrualAddr, "accrual system address")
+
 	flagJWTSecret := flag.String("jwt-secret", jwtSecret, "jwt secret")
 	flagJWTTTL := flag.String("jwt-ttl", jwtTTL.String(), "jwt ttl")
+
+	flagDBConnectTimeout := flag.String("db-timeout", dbConnectTimeout.String(), "db connect timeout")
+	flagHTTPShutdownTimeout := flag.String("shutdown-timeout", httpShutdownTimeout.String(), "http shutdown timeout")
+	flagWorkerInterval := flag.String("worker-interval", workerInterval.String(), "worker tick interval")
+	flagWorkerBatchSize := flag.Int("worker-batch", workerBatchSize, "worker batch size")
+
 	flag.Parse()
+
+	if d, err := time.ParseDuration(*flagDBConnectTimeout); err == nil && d > 0 {
+		dbConnectTimeout = d
+	}
+	if d, err := time.ParseDuration(*flagHTTPShutdownTimeout); err == nil && d > 0 {
+		httpShutdownTimeout = d
+	}
+	if d, err := time.ParseDuration(*flagWorkerInterval); err == nil && d > 0 {
+		workerInterval = d
+	}
+	if *flagWorkerBatchSize > 0 {
+		workerBatchSize = *flagWorkerBatchSize
+	}
 
 	// парсим ttl уже после флагов
 	parsedTTL, err := time.ParseDuration(*flagJWTTTL)
@@ -100,5 +162,10 @@ func Parse() *Config {
 		DBMaxConnLifetime:   dbMaxConnLifetime,
 		DBMaxConnIdleTime:   dbMaxConnIdleTime,
 		DBHealthCheckPeriod: dbHealthCheckPeriod,
+
+		DBConnectTimeout:    dbConnectTimeout,
+		HTTPShutdownTimeout: httpShutdownTimeout,
+		WorkerInterval:      workerInterval,
+		WorkerBatchSize:     workerBatchSize,
 	}
 }
