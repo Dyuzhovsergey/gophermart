@@ -45,10 +45,10 @@ func main() {
 	defer stop()
 
 	// ---------------- Подключение к Postgres ----------------
-	connectCtx, cancelConnect := context.WithTimeout(rootCtx, 5*time.Second)
-	defer cancelConnect()
+	dbCtx, cancelDB := context.WithTimeout(rootCtx, 5*time.Second)
+	defer cancelDB()
 
-	pool, err := postgres.Connect(connectCtx, cfg.DatabaseURI, log, postgres.PoolSettings{
+	pool, err := postgres.Open(dbCtx, cfg.DatabaseURI, log, postgres.PoolSettings{
 		MaxConns:          cfg.DBMaxConns,
 		MinConns:          cfg.DBMinConns,
 		MaxConnLifetime:   cfg.DBMaxConnLifetime,
@@ -56,18 +56,9 @@ func main() {
 		HealthCheckPeriod: cfg.DBHealthCheckPeriod,
 	})
 	if err != nil {
-		log.Fatal("db connect failed", zap.Error(err))
+		log.Fatal("db init failed", zap.Error(err))
 	}
 	defer pool.Close()
-
-	// ---------------- Миграции ----------------
-	migCtx, cancelMig := context.WithTimeout(rootCtx, 5*time.Second)
-	defer cancelMig()
-
-	if err := postgres.RunMigrations(migCtx, pool); err != nil {
-		log.Fatal("migrations failed", zap.Error(err))
-	}
-	log.Info("migrations applied")
 
 	// ---------------- JWT менеджер ----------------
 
