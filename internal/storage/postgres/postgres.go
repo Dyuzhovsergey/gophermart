@@ -19,9 +19,7 @@ type PoolSettings struct {
 	HealthCheckPeriod time.Duration
 }
 
-
 // Open создаёт пул, проверяет подключение и применяет миграции.
-// В результате наружу уходит "готовое к работе" хранилище (без протекающей абстракции).
 func Open(ctx context.Context, dsn string, log *zap.Logger, ps PoolSettings) (*pgxpool.Pool, error) {
 	pool, err := Connect(ctx, dsn, log, ps)
 	if err != nil {
@@ -77,7 +75,6 @@ func Connect(ctx context.Context, dsn string, log *zap.Logger, ps PoolSettings) 
 
 	return pool, nil
 }
-
 
 // normalizePoolSettings выставляет дефолты, если настройки не заданы.
 func normalizePoolSettings(ps PoolSettings) PoolSettings {
