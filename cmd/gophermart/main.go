@@ -93,6 +93,8 @@ func main() {
 		Handler: router,
 	}
 	// ---------------- Accrual клиент + Worker ----------------
+	var workerDone chan struct{} // nil, если воркер не стартовали
+
 	if cfg.AccrualSystemAddress == "" {
 		log.Warn("ACCRUAL_SYSTEM_ADDRESS is empty: worker disabled")
 	} else {
@@ -100,8 +102,13 @@ func main() {
 		if err != nil {
 			log.Fatal("accrual client init failed", zap.Error(err))
 		}
+
+		workerDone = make(chan struct{})
 		w := worker.New(log, ordersRepo, accrualClient, cfg.WorkerInterval, cfg.WorkerBatchSize)
-		go w.Run(rootCtx)
+		go func() {
+			defer close(workerDone)
+			w.Run(rootCtx)
+		}()
 	}
 
 	// ---------------- Запуск HTTP-сервера ----------------
@@ -121,6 +128,19 @@ func main() {
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown error", zap.Error(err))
+	}
+
+	// ---------------- Дожидаемся остановки воркера ----------------
+	if workerDone != nil {
+		waitCtx, cancelWait := context.WithTimeout(context.Background(), cfg.WorkerShutdownTimeout)
+		defer cancelWait()
+
+		select {
+		case <-workerDone:
+			log.Info("worker stopped")
+		case <-waitCtx.Done():
+			log.Warn("worker stop timeout", zap.Duration("timeout", cfg.WorkerShutdownTimeout))
+		}
 	}
 
 	log.Info("stopped")

@@ -26,10 +26,11 @@ type Config struct {
 	DBHealthCheckPeriod time.Duration
 
 	// Тайминги приложения
-	DBConnectTimeout    time.Duration
-	HTTPShutdownTimeout time.Duration
-	WorkerInterval      time.Duration
-	WorkerBatchSize     int
+	DBConnectTimeout      time.Duration
+	HTTPShutdownTimeout   time.Duration
+	WorkerInterval        time.Duration
+	WorkerBatchSize       int
+	WorkerShutdownTimeout time.Duration
 }
 
 func Parse() *Config {
@@ -48,10 +49,11 @@ func Parse() *Config {
 		DefaultDBMaxConnIdleTime         = 5 * time.Minute
 		DefaultDBHealthCheckPeriod       = 30 * time.Second
 
-		DefaultDBConnectTimeout    = 5 * time.Second
-		DefaultHTTPShutdownTimeout = 5 * time.Second
-		DefaultWorkerInterval      = 1 * time.Second
-		DefaultWorkerBatchSize     = 5
+		DefaultDBConnectTimeout      = 5 * time.Second
+		DefaultHTTPShutdownTimeout   = 5 * time.Second
+		DefaultWorkerInterval        = 1 * time.Second
+		DefaultWorkerBatchSize       = 5
+		DefaultWorkerShutdownTimeout = 15 * time.Second
 	)
 
 	// 1) берём дефолты
@@ -72,6 +74,7 @@ func Parse() *Config {
 	httpShutdownTimeout := DefaultHTTPShutdownTimeout
 	workerInterval := DefaultWorkerInterval
 	workerBatchSize := DefaultWorkerBatchSize
+	workerShutdownTimeout := DefaultWorkerShutdownTimeout
 
 	// 2) env переопределяет дефолты
 	if v := os.Getenv("RUN_ADDRESS"); v != "" {
@@ -116,6 +119,12 @@ func Parse() *Config {
 		}
 	}
 
+	if v := os.Getenv("WORKER_SHUTDOWN_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			workerShutdownTimeout = d
+		}
+	}
+
 	// 3) flags переопределяют env/def
 	flagRunAddr := flag.String("a", runAddr, "service run address (host:port)")
 	flagDataBaseURI := flag.String("d", dbURI, "database uri")
@@ -124,10 +133,11 @@ func Parse() *Config {
 	flagJWTSecret := flag.String("jwt-secret", jwtSecret, "jwt secret")
 	flagJWTTTL := flag.String("jwt-ttl", jwtTTL.String(), "jwt ttl")
 
-	flagDBConnectTimeout := flag.String("db-timeout", dbConnectTimeout.String(), "db connect timeout")
-	flagHTTPShutdownTimeout := flag.String("shutdown-timeout", httpShutdownTimeout.String(), "http shutdown timeout")
+	flagDBConnectTimeout := flag.String("db-connect-timeout", dbConnectTimeout.String(), "db connect timeout")
+	flagHTTPShutdownTimeout := flag.String("http-shutdown-timeout", httpShutdownTimeout.String(), "http shutdown timeout")
 	flagWorkerInterval := flag.String("worker-interval", workerInterval.String(), "worker tick interval")
 	flagWorkerBatchSize := flag.Int("worker-batch", workerBatchSize, "worker batch size")
+	flagWorkerShutdownTimeout := flag.String("worker-shutdown-timeout", workerShutdownTimeout.String(), "worker shutdown timeout")
 
 	flag.Parse()
 
@@ -142,6 +152,9 @@ func Parse() *Config {
 	}
 	if *flagWorkerBatchSize > 0 {
 		workerBatchSize = *flagWorkerBatchSize
+	}
+	if d, err := time.ParseDuration(*flagWorkerShutdownTimeout); err == nil && d > 0 {
+		workerShutdownTimeout = d
 	}
 
 	// парсим ttl уже после флагов
@@ -163,9 +176,10 @@ func Parse() *Config {
 		DBMaxConnIdleTime:   dbMaxConnIdleTime,
 		DBHealthCheckPeriod: dbHealthCheckPeriod,
 
-		DBConnectTimeout:    dbConnectTimeout,
-		HTTPShutdownTimeout: httpShutdownTimeout,
-		WorkerInterval:      workerInterval,
-		WorkerBatchSize:     workerBatchSize,
+		DBConnectTimeout:      dbConnectTimeout,
+		HTTPShutdownTimeout:   httpShutdownTimeout,
+		WorkerInterval:        workerInterval,
+		WorkerBatchSize:       workerBatchSize,
+		WorkerShutdownTimeout: workerShutdownTimeout,
 	}
 }

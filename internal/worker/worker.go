@@ -67,6 +67,10 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) tick(ctx context.Context) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	now := time.Now()
 	if now.Before(w.nextAllowed) {
 		return
@@ -84,6 +88,11 @@ func (w *Worker) tick(ctx context.Context) {
 	}
 
 	for _, it := range items {
+
+		if ctx.Err() != nil {
+			return
+		}
+
 		o, retryAfter, err := w.client.GetOrder(ctx, it.Number)
 		if err != nil {
 			if w.log != nil {
@@ -107,6 +116,10 @@ func (w *Worker) tick(ctx context.Context) {
 
 		// Маппинг статусов accrual -> статусы  Gophermart.
 		status := mapAccrualStatus(o.Status)
+
+		if ctx.Err() != nil {
+			return
+		}
 
 		if err := w.orders.ApplyAccrualResult(ctx, it.Number, status, o.Accrual); err != nil {
 			if w.log != nil {
