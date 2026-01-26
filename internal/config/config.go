@@ -77,49 +77,48 @@ func Parse() *Config {
 	workerShutdownTimeout := DefaultWorkerShutdownTimeout
 
 	// 2) env переопределяет дефолты
-	if v := os.Getenv("RUN_ADDRESS"); v != "" {
+	if v, ok := os.LookupEnv("RUN_ADDRESS"); ok {
 		runAddr = v
 	}
-	if v := os.Getenv("DATABASE_URI"); v != "" {
+	if v, ok := os.LookupEnv("DATABASE_URI"); ok {
 		dbURI = v
 	}
-	if v := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); v != "" {
+	if v, ok := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS"); ok {
 		accrualAddr = v
 	}
-	if v := os.Getenv("JWT_SECRET"); v != "" {
+	if v, ok := os.LookupEnv("JWT_SECRET"); ok {
 		jwtSecret = v
 	}
-	if v := os.Getenv("JWT_TTL"); v != "" {
-		ttl, err := time.ParseDuration(v)
-		if err == nil {
+	if v, ok := os.LookupEnv("JWT_TTL"); ok {
+		if ttl, err := time.ParseDuration(v); err == nil {
 			jwtTTL = ttl
 		}
 	}
-	if v := os.Getenv("DB_CONNECT_TIMEOUT"); v != "" {
+	if v, ok := os.LookupEnv("DB_CONNECT_TIMEOUT"); ok {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			dbConnectTimeout = d
 		}
 	}
 
-	if v := os.Getenv("HTTP_SHUTDOWN_TIMEOUT"); v != "" {
+	if v, ok := os.LookupEnv("HTTP_SHUTDOWN_TIMEOUT"); ok {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			httpShutdownTimeout = d
 		}
 	}
 
-	if v := os.Getenv("WORKER_INTERVAL"); v != "" {
+	if v, ok := os.LookupEnv("WORKER_INTERVAL"); ok {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			workerInterval = d
 		}
 	}
 
-	if v := os.Getenv("WORKER_BATCH_SIZE"); v != "" {
+	if v, ok := os.LookupEnv("WORKER_BATCH_SIZE"); ok {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			workerBatchSize = n
 		}
 	}
 
-	if v := os.Getenv("WORKER_SHUTDOWN_TIMEOUT"); v != "" {
+	if v, ok := os.LookupEnv("WORKER_SHUTDOWN_TIMEOUT"); ok {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			workerShutdownTimeout = d
 		}
