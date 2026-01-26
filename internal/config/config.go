@@ -184,7 +184,7 @@ func Parse() *Config {
 	}
 }
 
-// Validate проверяет конфигурацию на минимальную корректность.
+// Validate проверяет конфигурацию на корректность.
 func (c *Config) Validate() error {
 	if c.DatabaseURI == "" {
 		return fmt.Errorf("DATABASE_URI is empty")
