@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
 
 // Order — ответ accrual-сервиса.
@@ -22,7 +24,7 @@ type Order struct {
 // Client — клиент внешнего сервиса начислений.
 type Client struct {
 	baseURL string
-	http    *http.Client
+	http    *retryablehttp.Client
 }
 
 // New создаёт клиента accrual.
@@ -42,11 +44,31 @@ func New(addr string) (*Client, error) {
 		return nil, fmt.Errorf("parse accrual addr: %w", err)
 	}
 
+	rc := retryablehttp.NewClient()
+
+	// Настройки ретраев
+	rc.RetryMax = 3
+	rc.RetryWaitMin = 100 * time.Millisecond
+	rc.RetryWaitMax = 1 * time.Second
+
+	// Отключаем логирование retryablehttp
+	rc.Logger = nil
+
+	rc.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		// Ретраим только сетевые ошибки (err != nil).
+		if err != nil {
+			return true, nil
+		}
+		// Не ретраим никакие ответы, включая 429 и 5xx — обработаем сами.
+		return false, nil
+	}
+
+	// Таймаут на весь запрос (включая ретраи). Можно подстроить.
+	rc.HTTPClient.Timeout = 3 * time.Second
+
 	return &Client{
 		baseURL: strings.TrimRight(u.String(), "/"),
-		http: &http.Client{
-			Timeout: 3 * time.Second,
-		},
+		http:    rc,
 	}, nil
 }
 
@@ -56,7 +78,8 @@ func New(addr string) (*Client, error) {
 // - order == nil при 204 (заказ не зарегистрирован)
 // - retryAfter != nil при 429
 func (c *Client) GetOrder(ctx context.Context, number string) (order *Order, retryAfter *time.Duration, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/orders/"+number, nil)
+	// retryablehttp.Request поддерживает контекст.
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/orders/"+number, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create request: %w", err)
 	}
