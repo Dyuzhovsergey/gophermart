@@ -76,12 +76,9 @@ func (s *service) LoginBasic(ctx context.Context, login, plainPassword string) (
 		return "", domainerr.ErrUnauthorized
 	}
 
-	ok, err := password.CheckPassword(u.Password, plainPassword)
+	err = password.CheckPassword(u.Password, plainPassword)
 	if err != nil {
 		return "", fmt.Errorf("check password: %w", err)
-	}
-	if !ok {
-		return "", domainerr.ErrUnauthorized
 	}
 
 	token, err := s.jwt.Generate(u.ID)

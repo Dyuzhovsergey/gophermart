@@ -93,7 +93,7 @@ func main() {
 		Handler: router,
 	}
 	// ---------------- Accrual клиент + Worker ----------------
-	var workerDone chan struct{} // nil, если воркер не стартовали
+	var workerDone chan struct{}
 
 	if cfg.AccrualSystemAddress == "" {
 		log.Warn("ACCRUAL_SYSTEM_ADDRESS is empty: worker disabled")
@@ -130,7 +130,7 @@ func main() {
 		log.Error("shutdown error", zap.Error(err))
 	}
 
-	// ---------------- Дожидаемся остановки воркера ----------------
+	// ----------------  Ожидание остановки воркера ----------------
 	if workerDone != nil {
 		waitCtx, cancelWait := context.WithTimeout(context.Background(), cfg.WorkerShutdownTimeout)
 		defer cancelWait()

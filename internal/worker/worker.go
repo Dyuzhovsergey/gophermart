@@ -3,6 +3,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
@@ -88,25 +89,26 @@ func (w *Worker) tick(ctx context.Context) {
 	}
 
 	for _, it := range items {
-
 		if ctx.Err() != nil {
 			return
 		}
 
-		o, retryAfter, err := w.client.GetOrder(ctx, it.Number)
+		o, err := w.client.GetOrder(ctx, it.Number)
 		if err != nil {
+			// 429 Too Many Requests: ставим глобальную паузу и выходим из tick.
+			var rl *accrual.RateLimitError
+			if errors.As(err, &rl) {
+				w.nextAllowed = time.Now().Add(rl.RetryAfter)
+				if w.log != nil {
+					w.log.Warn("accrual rate limit", zap.Duration("retry_after", rl.RetryAfter))
+				}
+				return
+			}
+
 			if w.log != nil {
 				w.log.Error("accrual get failed", zap.String("number", it.Number), zap.Error(err))
 			}
 			continue
-		}
-
-		if retryAfter != nil {
-			w.nextAllowed = time.Now().Add(*retryAfter)
-			if w.log != nil {
-				w.log.Warn("accrual rate limit", zap.Duration("retry_after", *retryAfter))
-			}
-			return
 		}
 
 		// 204 — заказа ещё нет в accrual: пропускаем.
@@ -114,7 +116,7 @@ func (w *Worker) tick(ctx context.Context) {
 			continue
 		}
 
-		// Маппинг статусов accrual -> статусы  Gophermart.
+		// Маппинг статусов accrual -> статусы Gophermart.
 		status := mapAccrualStatus(o.Status)
 
 		if ctx.Err() != nil {
@@ -129,6 +131,7 @@ func (w *Worker) tick(ctx context.Context) {
 		}
 	}
 }
+
 
 func mapAccrualStatus(s string) string {
 	switch s {

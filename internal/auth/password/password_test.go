@@ -1,6 +1,9 @@
 package password
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestHashPassword_And_CheckPassword_OK(t *testing.T) {
 	t.Parallel()
@@ -14,16 +17,12 @@ func TestHashPassword_And_CheckPassword_OK(t *testing.T) {
 		t.Fatalf("HashPassword() returned empty hash")
 	}
 
-	ok, err := CheckPassword(hash, pass)
-	if err != nil {
+	if err := CheckPassword(hash, pass); err != nil {
 		t.Fatalf("CheckPassword() error = %v", err)
-	}
-	if !ok {
-		t.Fatalf("CheckPassword() expected ok=true")
 	}
 }
 
-func TestCheckPassword_WrongPassword(t *testing.T) {
+func TestCheckPassword_WrongPassword_ReturnsErrWrongPassword(t *testing.T) {
 	t.Parallel()
 
 	hash, err := HashPassword("right-password")
@@ -31,12 +30,12 @@ func TestCheckPassword_WrongPassword(t *testing.T) {
 		t.Fatalf("HashPassword() error = %v", err)
 	}
 
-	ok, err := CheckPassword(hash, "wrong-password")
-	if err != nil {
-		t.Fatalf("CheckPassword() error = %v", err)
+	err = CheckPassword(hash, "wrong-password")
+	if err == nil {
+		t.Fatal("want error, got nil")
 	}
-	if ok {
-		t.Fatalf("CheckPassword() expected ok=false")
+	if !errors.Is(err, ErrWrongPassword) {
+		t.Fatalf("want ErrWrongPassword, got %v", err)
 	}
 }
 

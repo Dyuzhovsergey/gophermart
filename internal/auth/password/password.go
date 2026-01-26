@@ -3,6 +3,7 @@ package password
 
 import (
 	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -12,6 +13,8 @@ var (
 	ErrEmptyPassword = errors.New("empty password")
 	// ErrEmptyHash — передан пустой хеш.
 	ErrEmptyHash = errors.New("empty hash")
+	// ErrWrongPassword — пароль не подходит к хешу.
+	ErrWrongPassword = errors.New("wrong password")
 )
 
 // HashPassword хеширует пароль с использованием bcrypt и возвращает строковый хеш.
@@ -29,23 +32,24 @@ func HashPassword(password string) (string, error) {
 }
 
 // CheckPassword проверяет соответствие пароля bcrypt-хешу.
-func CheckPassword(hash, password string) (bool, error) {
+func CheckPassword(hash, password string) error {
 	if hash == "" {
-		return false, ErrEmptyHash
+		return ErrEmptyHash
 	}
 	if password == "" {
-		return false, ErrEmptyPassword
+		return ErrEmptyPassword
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err == nil {
-		return true, nil // пароль подходит
+		return nil
 	}
 
+	// Неверный пароль — это не "успех", это ожидаемая ошибка.
 	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		return false, nil // пароль не подходит
+		return ErrWrongPassword
 	}
 
-	// Остальные ошибки возвращаем как err.
-	return false, err
+	// Остальные ошибки считаем проблемой формата/хеша и т.п.
+	return fmt.Errorf("compare hash and password: %w", err)
 }

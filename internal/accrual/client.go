@@ -21,6 +21,15 @@ type Order struct {
 	Accrual *float64 `json:"accrual,omitempty"`
 }
 
+// RateLimitError — типизированная ошибка для 429 Too Many Requests.
+type RateLimitError struct {
+	RetryAfter time.Duration
+}
+
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("accrual rate limited: retry after %s", e.RetryAfter)
+}
+
 // Client — клиент внешнего сервиса начислений.
 type Client struct {
 	baseURL string
@@ -54,16 +63,15 @@ func New(addr string) (*Client, error) {
 	// Отключаем логирование retryablehttp
 	rc.Logger = nil
 
+	// Ретраим только сетевые ошибки
 	rc.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		// Ретраим сетевые ошибки.
-		if err != nil {
-			return true, nil
+		if resp != nil {
+			return false, nil
 		}
-		// Не ретраим никакие ответы, включая 429 и 5xx — обработаем сами.
-		return false, nil
+		return err != nil, nil
 	}
 
-	// Таймаут на весь запрос (включая ретраи). Можно подстроить.
+	// Таймаут на одну попытку запроса
 	rc.HTTPClient.Timeout = 3 * time.Second
 
 	return &Client{
@@ -73,20 +81,16 @@ func New(addr string) (*Client, error) {
 }
 
 // GetOrder получает статус/начисление по заказу.
-// Возвращает:
-// - order != nil при 200
-// - order == nil при 204 (заказ не зарегистрирован)
-// - retryAfter != nil при 429
-func (c *Client) GetOrder(ctx context.Context, number string) (order *Order, retryAfter *time.Duration, err error) {
-	// retryablehttp.Request поддерживает контекст.
+func (c *Client) GetOrder(ctx context.Context, number string) (*Order, error) {
 	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/orders/"+number, nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create request: %w", err)
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("do request: %w", err)
+		// сетевая ошибка
+		return nil, fmt.Errorf("do request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -94,28 +98,35 @@ func (c *Client) GetOrder(ctx context.Context, number string) (order *Order, ret
 	case http.StatusOK:
 		var o Order
 		if err := json.NewDecoder(resp.Body).Decode(&o); err != nil {
-			return nil, nil, fmt.Errorf("decode response: %w", err)
+			return nil, fmt.Errorf("decode response: %w", err)
 		}
-		return &o, nil, nil
+		return &o, nil
 
 	case http.StatusNoContent:
-		return nil, nil, nil
+		// 204 — заказа ещё нет в accrual
+		return nil, nil
 
 	case http.StatusTooManyRequests:
-		ra := resp.Header.Get("Retry-After")
-		if ra == "" {
-			d := 60 * time.Second
-			return nil, &d, nil
-		}
-		sec, parseErr := strconv.Atoi(ra)
-		if parseErr != nil {
-			d := 60 * time.Second
-			return nil, &d, nil
-		}
-		d := time.Duration(sec) * time.Second
-		return nil, &d, nil
+		// 429 — читаем Retry-After (в секундах)
+		retryAfter := parseRetryAfter(resp.Header, 60*time.Second)
+		return nil, &RateLimitError{RetryAfter: retryAfter}
 
 	default:
-		return nil, nil, fmt.Errorf("accrual unexpected status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("accrual unexpected status: %d", resp.StatusCode)
 	}
+}
+
+// parseRetryAfter читает Retry-After из заголовков.
+func parseRetryAfter(h http.Header, defaultValue time.Duration) time.Duration {
+	ra := strings.TrimSpace(h.Get("Retry-After"))
+	if ra == "" {
+		return defaultValue
+	}
+
+	sec, err := strconv.Atoi(ra)
+	if err != nil || sec <= 0 {
+		return defaultValue
+	}
+
+	return time.Duration(sec) * time.Second
 }

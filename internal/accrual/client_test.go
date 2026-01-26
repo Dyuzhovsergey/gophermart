@@ -2,6 +2,7 @@ package accrual
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +31,6 @@ func TestGetOrder_OK200_ReturnsOrder(t *testing.T) {
 	number := "79927398713"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// правильный эндпоинт.
 		if r.Method != http.MethodGet {
 			t.Fatalf("want method GET, got %s", r.Method)
 		}
@@ -51,13 +51,11 @@ func TestGetOrder_OK200_ReturnsOrder(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	got, retryAfter, err := c.GetOrder(ctx, number)
+	got, err := c.GetOrder(ctx, number)
 	if err != nil {
 		t.Fatalf("GetOrder returned error: %v", err)
 	}
-	if retryAfter != nil {
-		t.Fatalf("want retryAfter=nil, got %v", *retryAfter)
-	}
+
 	if got == nil {
 		t.Fatal("want order != nil, got nil")
 	}
@@ -88,15 +86,12 @@ func TestGetOrder_NoContent204_ReturnsNilOrder(t *testing.T) {
 		t.Fatalf("New returned error: %v", err)
 	}
 
-	got, retryAfter, err := c.GetOrder(context.Background(), number)
+	got, err := c.GetOrder(context.Background(), number)
 	if err != nil {
 		t.Fatalf("GetOrder returned error: %v", err)
 	}
 	if got != nil {
 		t.Fatalf("want order=nil, got %#v", got)
-	}
-	if retryAfter != nil {
-		t.Fatalf("want retryAfter=nil, got %v", *retryAfter)
 	}
 }
 
@@ -114,18 +109,20 @@ func TestGetOrder_TooManyRequests429_WithRetryAfterHeader(t *testing.T) {
 		t.Fatalf("New returned error: %v", err)
 	}
 
-	got, retryAfter, err := c.GetOrder(context.Background(), number)
-	if err != nil {
-		t.Fatalf("GetOrder returned error: %v", err)
-	}
+	got, err := c.GetOrder(context.Background(), number)
 	if got != nil {
 		t.Fatalf("want order=nil, got %#v", got)
 	}
-	if retryAfter == nil {
-		t.Fatal("want retryAfter != nil, got nil")
+	if err == nil {
+		t.Fatal("want rate limit error, got nil")
 	}
-	if *retryAfter != 5*time.Second {
-		t.Fatalf("want retryAfter=5s, got %v", *retryAfter)
+
+	var rl *RateLimitError
+	if !errors.As(err, &rl) {
+		t.Fatalf("want *RateLimitError, got %T: %v", err, err)
+	}
+	if rl.RetryAfter != 5*time.Second {
+		t.Fatalf("want retryAfter=5s, got %s", rl.RetryAfter)
 	}
 }
 
@@ -142,18 +139,20 @@ func TestGetOrder_TooManyRequests429_WithoutRetryAfterHeader_UsesDefault(t *test
 		t.Fatalf("New returned error: %v", err)
 	}
 
-	got, retryAfter, err := c.GetOrder(context.Background(), number)
-	if err != nil {
-		t.Fatalf("GetOrder returned error: %v", err)
-	}
+	got, err := c.GetOrder(context.Background(), number)
 	if got != nil {
 		t.Fatalf("want order=nil, got %#v", got)
 	}
-	if retryAfter == nil {
-		t.Fatal("want retryAfter != nil, got nil")
+	if err == nil {
+		t.Fatal("want rate limit error, got nil")
 	}
-	if *retryAfter != 60*time.Second {
-		t.Fatalf("want retryAfter=60s, got %v", *retryAfter)
+
+	var rl *RateLimitError
+	if !errors.As(err, &rl) {
+		t.Fatalf("want *RateLimitError, got %T: %v", err, err)
+	}
+	if rl.RetryAfter != 60*time.Second {
+		t.Fatalf("want retryAfter=60s, got %s", rl.RetryAfter)
 	}
 }
 
@@ -171,18 +170,20 @@ func TestGetOrder_TooManyRequests429_InvalidRetryAfterHeader_UsesDefault(t *test
 		t.Fatalf("New returned error: %v", err)
 	}
 
-	got, retryAfter, err := c.GetOrder(context.Background(), number)
-	if err != nil {
-		t.Fatalf("GetOrder returned error: %v", err)
-	}
+	got, err := c.GetOrder(context.Background(), number)
 	if got != nil {
 		t.Fatalf("want order=nil, got %#v", got)
 	}
-	if retryAfter == nil {
-		t.Fatal("want retryAfter != nil, got nil")
+	if err == nil {
+		t.Fatal("want rate limit error, got nil")
 	}
-	if *retryAfter != 60*time.Second {
-		t.Fatalf("want retryAfter=60s, got %v", *retryAfter)
+
+	var rl *RateLimitError
+	if !errors.As(err, &rl) {
+		t.Fatalf("want *RateLimitError, got %T: %v", err, err)
+	}
+	if rl.RetryAfter != 60*time.Second {
+		t.Fatalf("want retryAfter=60s, got %s", rl.RetryAfter)
 	}
 }
 
@@ -199,16 +200,14 @@ func TestGetOrder_UnexpectedStatus_ReturnsError(t *testing.T) {
 		t.Fatalf("New returned error: %v", err)
 	}
 
-	got, retryAfter, err := c.GetOrder(context.Background(), number)
+	got, err := c.GetOrder(context.Background(), number)
 	if err == nil {
 		t.Fatal("want error, got nil")
 	}
 	if got != nil {
 		t.Fatalf("want order=nil, got %#v", got)
 	}
-	if retryAfter != nil {
-		t.Fatalf("want retryAfter=nil, got %v", *retryAfter)
-	}
+
 	if !strings.Contains(err.Error(), "unexpected status") {
 		t.Fatalf("want error contains %q, got %q", "unexpected status", err.Error())
 	}
