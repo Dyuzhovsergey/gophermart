@@ -55,7 +55,7 @@ func New(addr string) (*Client, error) {
 	rc.Logger = nil
 
 	rc.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		// Ретраим только сетевые ошибки (err != nil).
+		// Ретраим сетевые ошибки.
 		if err != nil {
 			return true, nil
 		}
