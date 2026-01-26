@@ -3,6 +3,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -181,4 +182,25 @@ func Parse() *Config {
 		WorkerBatchSize:       workerBatchSize,
 		WorkerShutdownTimeout: workerShutdownTimeout,
 	}
+}
+
+// Validate проверяет конфигурацию на минимальную корректность.
+func (c *Config) Validate() error {
+	if c.DatabaseURI == "" {
+		return fmt.Errorf("DATABASE_URI is empty")
+	}
+
+	if c.JWTTTL <= 0 {
+		return fmt.Errorf("JWT_TTL must be positive, got %s", c.JWTTTL.String())
+	}
+
+	if c.JWTSecret == "" {
+		return fmt.Errorf("JWT_SECRET is empty")
+	}
+
+	if c.AccrualSystemAddress == "" {
+		return fmt.Errorf("ACCRUAL_SYSTEM_ADDRESS is empty")
+	}
+
+	return nil
 }
