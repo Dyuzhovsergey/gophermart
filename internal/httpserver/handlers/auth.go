@@ -29,6 +29,26 @@ func NewAuthHandler(log *zap.Logger, authSvc auth.Service) *AuthHandler {
 	return &AuthHandler{log: log, auth: authSvc}
 }
 
+// logIfServerError логирует только “нештатные” ошибки (5xx).
+// Это помогает находить реальные баги/падения БД/внешних сервисов и т.п.,
+// но не засоряет лог ожидаемыми ошибками типа 400/401/409.
+func (h *AuthHandler) logIfServerError(r *http.Request, status int, err error, msg string) {
+	if status < 500 {
+		return
+	}
+	if h.log == nil {
+		return
+	}
+
+	h.log.Error(msg,
+		zap.Int("status", status),
+		zap.Error(err),
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("remote", r.RemoteAddr),
+	)
+}
+
 // Register — POST /api/user/register (JSON login/password).
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req credentialsRequest
@@ -45,9 +65,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	token, err := h.auth.Register(r.Context(), req.Login, req.Password)
 	if err != nil {
 		status := httperrors.MapErrorToStatus(err)
+		h.logIfServerError(r, status, err, "register failed")
 		http.Error(w, http.StatusText(status), status)
 		return
 	}
+
 	w.Header().Set("Authorization", "Bearer "+token)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -79,6 +101,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	token, err := h.auth.LoginBasic(r.Context(), login, pass)
 	if err != nil {
 		status := httperrors.MapErrorToStatus(err)
+		h.logIfServerError(r, status, err, "login failed")
 		http.Error(w, http.StatusText(status), status)
 		return
 	}
