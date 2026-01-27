@@ -23,17 +23,17 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	// Оборачиваем pgxpool в database/sql DB для goose.
-	db := stdlib.OpenDBFromPool(pool) // :contentReference[oaicite:2]{index=2}
+	db := stdlib.OpenDBFromPool(pool)
 
 	// Говорим goose читать миграции из embed.FS.
-	goose.SetBaseFS(migrationsFS) // :contentReference[oaicite:3]{index=3}
+	goose.SetBaseFS(migrationsFS)
 
-	if err := goose.SetDialect("postgres"); err != nil { // :contentReference[oaicite:4]{index=4}
+	if err := goose.SetDialect("postgres"); err != nil {
 		return fmt.Errorf("goose set dialect: %w", err)
 	}
 
 	// Путь "migrations" — это относительный путь ВНУТРИ embed.FS.
-	if err := goose.Up(db, "migrations"); err != nil { // :contentReference[oaicite:5]{index=5}
+	if err := goose.Up(db, "migrations"); err != nil {
 		return fmt.Errorf("goose up: %w", err)
 	}
 
