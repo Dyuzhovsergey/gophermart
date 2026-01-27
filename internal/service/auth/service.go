@@ -4,6 +4,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/auth/password"
 	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
@@ -40,6 +41,11 @@ func New(repo userrepo.Repository, jwt TokenManager, accounts AccountProvider) S
 // Register регистрирует пользователя и возвращает JWT.
 // Если логин занят — возвращает domainerr.ErrConflict.
 func (s *service) Register(ctx context.Context, login, plainPassword string) (string, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || plainPassword == "" {
+		return "", domainerr.ErrBadRequest
+	}
+
 	hash, err := password.HashPassword(plainPassword)
 	if err != nil {
 		return "", fmt.Errorf("hash password: %w", err)
@@ -68,6 +74,11 @@ func (s *service) Register(ctx context.Context, login, plainPassword string) (st
 // LoginBasic аутентифицирует по логину/паролю (из Basic) и возвращает JWT.
 // Если пара неверная — возвращает domainerr.ErrUnauthorized.
 func (s *service) LoginBasic(ctx context.Context, login, plainPassword string) (string, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || plainPassword == "" {
+		return "", domainerr.ErrBadRequest
+	}
+
 	u, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		return "", err

@@ -28,6 +28,9 @@ func MapErrorToStatus(err error) int {
 	case domainerr.ErrAlreadyUploadedByUser:
 		return http.StatusOK // 200
 
+	case domainerr.ErrBadRequest:
+		return http.StatusBadRequest // 400
+
 	default:
 		return http.StatusInternalServerError // 500
 	}

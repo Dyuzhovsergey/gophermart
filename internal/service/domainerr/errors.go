@@ -3,6 +3,9 @@ package domainerr
 
 import "errors"
 
+// ErrBadRequest — некорректные входные данные (пустой логин/пароль и т.п.)
+var ErrBadRequest = errors.New("bad request")
+
 // ErrUnauthorized — пользователь не авторизован
 var ErrUnauthorized = errors.New("unauthorized")
 
