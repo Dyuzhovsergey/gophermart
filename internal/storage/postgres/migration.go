@@ -2,48 +2,39 @@ package postgres
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 )
 
-// RunMigrations executes initial schema.
+// Встраиваем миграции в бинарь, чтобы не зависеть от текущей директории запуска.
+//
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+// RunMigrations применяет SQL-миграции goose.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	const ddl = `
-CREATE TABLE IF NOT EXISTS users (
-    id          SERIAL PRIMARY KEY,
-    login       TEXT UNIQUE NOT NULL,
-    password    TEXT NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+	//_ = ctx // goose.Up работает без ctx; оставляем параметр, чтобы не ломать внешний код.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
-CREATE TABLE IF NOT EXISTS accounts (
-    user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    balance     NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    withdrawn   NUMERIC(12, 2) NOT NULL DEFAULT 0
-);
+	// Оборачиваем pgxpool в database/sql DB для goose.
+	db := stdlib.OpenDBFromPool(pool) // :contentReference[oaicite:2]{index=2}
 
-CREATE TABLE IF NOT EXISTS orders (
-    number      TEXT PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status      TEXT NOT NULL,
-    accrual     NUMERIC(12, 2),
-    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+	// Говорим goose читать миграции из embed.FS.
+	goose.SetBaseFS(migrationsFS) // :contentReference[oaicite:3]{index=3}
 
-CREATE TABLE IF NOT EXISTS withdrawals (
-    id           SERIAL PRIMARY KEY,
-    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    order_number TEXT NOT NULL,
-    sum          NUMERIC(12, 2) NOT NULL,
-    processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_withdrawals_user_id ON withdrawals(user_id);
-`
-	_, err := pool.Exec(ctx, ddl)
-	if err != nil {
-		return fmt.Errorf("run migrations: %w", err)
+	if err := goose.SetDialect("postgres"); err != nil { // :contentReference[oaicite:4]{index=4}
+		return fmt.Errorf("goose set dialect: %w", err)
+	}
+
+	// Путь "migrations" — это относительный путь ВНУТРИ embed.FS.
+	if err := goose.Up(db, "migrations"); err != nil { // :contentReference[oaicite:5]{index=5}
+		return fmt.Errorf("goose up: %w", err)
 	}
 
 	return nil

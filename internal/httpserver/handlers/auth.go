@@ -31,10 +31,7 @@ func NewAuthHandler(log *zap.Logger, authSvc auth.Service) *AuthHandler {
 
 // logIfServerError логирует только “нештатные” ошибки (5xx).
 func (h *AuthHandler) logIfServerError(r *http.Request, status int, err error, msg string) {
-	if status < 500 {
-		return
-	}
-	if h.log == nil {
+	if status < 500 || h.log == nil {
 		return
 	}
 
@@ -55,6 +52,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Login = strings.TrimSpace(req.Login)
+	if req.Login == "" || req.Password == "" {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
 
 	token, err := h.auth.Register(r.Context(), req.Login, req.Password)
 	if err != nil {
