@@ -32,7 +32,6 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("goose set dialect: %w", err)
 	}
 
-	// Путь "migrations" — это относительный путь ВНУТРИ embed.FS.
 	if err := goose.Up(db, "migrations"); err != nil {
 		return fmt.Errorf("goose up: %w", err)
 	}
