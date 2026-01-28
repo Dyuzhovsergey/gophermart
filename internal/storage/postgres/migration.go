@@ -10,14 +10,11 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-// Встраиваем миграции в бинарь, чтобы не зависеть от текущей директории запуска.
-//
-//go:embed migrations/*.sql
+// Встраиваем миграции в бинарь
 var migrationsFS embed.FS
 
 // RunMigrations применяет SQL-миграции goose.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	//_ = ctx // goose.Up работает без ctx; оставляем параметр, чтобы не ломать внешний код.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
