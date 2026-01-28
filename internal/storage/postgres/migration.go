@@ -11,6 +11,8 @@ import (
 )
 
 // Встраиваем миграции в бинарь
+//
+//go:embed migrations/*.sql
 var migrationsFS embed.FS
 
 // RunMigrations применяет SQL-миграции goose.
