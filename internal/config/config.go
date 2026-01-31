@@ -27,10 +27,12 @@ type Config struct {
 	DBHealthCheckPeriod time.Duration
 
 	// Тайминги приложения
-	DBConnectTimeout      time.Duration
-	HTTPShutdownTimeout   time.Duration
-	WorkerInterval        time.Duration
-	WorkerBatchSize       int
+	DBConnectTimeout    time.Duration
+	HTTPShutdownTimeout time.Duration
+	WorkerInterval      time.Duration
+	WorkerBatchSize     int
+	WorkerConcurrency   int
+
 	WorkerShutdownTimeout time.Duration
 }
 
@@ -50,10 +52,12 @@ func Parse() *Config {
 		DefaultDBMaxConnIdleTime         = 5 * time.Minute
 		DefaultDBHealthCheckPeriod       = 30 * time.Second
 
-		DefaultDBConnectTimeout      = 5 * time.Second
-		DefaultHTTPShutdownTimeout   = 5 * time.Second
-		DefaultWorkerInterval        = 1 * time.Second
-		DefaultWorkerBatchSize       = 5
+		DefaultDBConnectTimeout    = 5 * time.Second
+		DefaultHTTPShutdownTimeout = 5 * time.Second
+		DefaultWorkerInterval      = 1 * time.Second
+		DefaultWorkerBatchSize     = 5
+		DefaultWorkerConcurrency   = 5
+
 		DefaultWorkerShutdownTimeout = 15 * time.Second
 	)
 
@@ -75,6 +79,8 @@ func Parse() *Config {
 	httpShutdownTimeout := DefaultHTTPShutdownTimeout
 	workerInterval := DefaultWorkerInterval
 	workerBatchSize := DefaultWorkerBatchSize
+	workerConcurrency := DefaultWorkerConcurrency
+
 	workerShutdownTimeout := DefaultWorkerShutdownTimeout
 
 	// 2) env переопределяет дефолты
@@ -119,6 +125,12 @@ func Parse() *Config {
 		}
 	}
 
+	if v, ok := os.LookupEnv("WORKER_CONCURRENCY"); ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			workerConcurrency = n
+		}
+	}
+
 	if v, ok := os.LookupEnv("WORKER_SHUTDOWN_TIMEOUT"); ok {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			workerShutdownTimeout = d
@@ -137,6 +149,8 @@ func Parse() *Config {
 	flagHTTPShutdownTimeout := flag.String("http-shutdown-timeout", httpShutdownTimeout.String(), "http shutdown timeout")
 	flagWorkerInterval := flag.String("worker-interval", workerInterval.String(), "worker tick interval")
 	flagWorkerBatchSize := flag.Int("worker-batch", workerBatchSize, "worker batch size")
+	flagWorkerConcurrency := flag.Int("worker-conc", workerConcurrency, "worker concurrency")
+
 	flagWorkerShutdownTimeout := flag.String("worker-shutdown-timeout", workerShutdownTimeout.String(), "worker shutdown timeout")
 
 	flag.Parse()
@@ -152,6 +166,9 @@ func Parse() *Config {
 	}
 	if *flagWorkerBatchSize > 0 {
 		workerBatchSize = *flagWorkerBatchSize
+	}
+	if *flagWorkerConcurrency > 0 {
+		workerConcurrency = *flagWorkerConcurrency
 	}
 	if d, err := time.ParseDuration(*flagWorkerShutdownTimeout); err == nil && d > 0 {
 		workerShutdownTimeout = d
@@ -176,10 +193,12 @@ func Parse() *Config {
 		DBMaxConnIdleTime:   dbMaxConnIdleTime,
 		DBHealthCheckPeriod: dbHealthCheckPeriod,
 
-		DBConnectTimeout:      dbConnectTimeout,
-		HTTPShutdownTimeout:   httpShutdownTimeout,
-		WorkerInterval:        workerInterval,
-		WorkerBatchSize:       workerBatchSize,
+		DBConnectTimeout:    dbConnectTimeout,
+		HTTPShutdownTimeout: httpShutdownTimeout,
+		WorkerInterval:      workerInterval,
+		WorkerBatchSize:     workerBatchSize,
+		WorkerConcurrency:   workerConcurrency,
+
 		WorkerShutdownTimeout: workerShutdownTimeout,
 	}
 }
@@ -196,6 +215,10 @@ func (c *Config) Validate() error {
 
 	if c.JWTSecret == "" {
 		return fmt.Errorf("JWT_SECRET is empty")
+	}
+
+	if c.WorkerConcurrency <= 0 {
+		return fmt.Errorf("WORKER_CONCURRENCY must be positive, got %d", c.WorkerConcurrency)
 	}
 
 	if c.AccrualSystemAddress == "" {

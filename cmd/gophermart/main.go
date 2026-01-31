@@ -104,7 +104,12 @@ func main() {
 		}
 
 		workerDone = make(chan struct{})
-		w := worker.New(log, ordersRepo, accrualClient, cfg.WorkerInterval, cfg.WorkerBatchSize)
+		w := worker.New(log, ordersRepo, accrualClient, worker.Config{
+			Interval:    cfg.WorkerInterval,
+			BatchSize:   cfg.WorkerBatchSize,
+			Concurrency: cfg.WorkerConcurrency,
+		})
+
 		go func() {
 			defer close(workerDone)
 			w.Run(rootCtx)
