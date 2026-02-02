@@ -41,16 +41,16 @@ type Worker struct {
 	orders OrdersRepository
 	client AccrualClient
 
-	interval    time.Duration
-	limit       int
-	concurrency int
+	interval     time.Duration
+	limit        int
+	workersCount int
 
 	jobs chan OrderForWork
 	wg   sync.WaitGroup
 
-	// inflight защищает от дублей
-	inflightMu sync.Mutex
-	inflight   map[string]struct{}
+	// inWork защищает от дублей
+	inWorkMu sync.Mutex
+	inWork   map[string]struct{}
 
 	// nextAllowed — общий сон для всех воркеров при 429 Retry-After.
 	rateMu      sync.Mutex
@@ -76,18 +76,18 @@ func New(log *zap.Logger, orders OrdersRepository, client AccrualClient, cfg Con
 
 	jobsBuf := cfg.JobsBuffer
 	if jobsBuf <= 0 {
-		jobsBuf = concurrency * limit
+		jobsBuf = limit * 2
 	}
 
 	return &Worker{
-		log:         log,
-		orders:      orders,
-		client:      client,
-		interval:    interval,
-		limit:       limit,
-		concurrency: concurrency,
-		jobs:        make(chan OrderForWork, jobsBuf),
-		inflight:    make(map[string]struct{}),
+		log:          log,
+		orders:       orders,
+		client:       client,
+		interval:     interval,
+		limit:        limit,
+		workersCount: concurrency,
+		jobs:         make(chan OrderForWork, jobsBuf),
+		inWork:       make(map[string]struct{}),
 	}
 }
 
@@ -96,7 +96,7 @@ func New(log *zap.Logger, orders OrdersRepository, client AccrualClient, cfg Con
 // 2) диспетчер, который по тикеру выбирает заказы из БД и кладёт их в jobs.
 func (w *Worker) Run(ctx context.Context) {
 	// Запускаем воркеры.
-	for i := 0; i < w.concurrency; i++ {
+	for i := 0; i < w.workersCount; i++ {
 		w.wg.Add(1)
 		go func(workerID int) {
 			defer w.wg.Done()
@@ -148,16 +148,16 @@ func (w *Worker) dispatch(ctx context.Context) {
 			return
 		}
 
-		ok := w.markInFlight(it.Number)
+		ok := w.markInWork(it.Number)
 		if !ok {
 			continue
 		}
 
 		select {
-		case w.jobs <- it:
-			// ok
+		case w.jobs <- it: // ok
+
 		case <-ctx.Done():
-			w.unmarkInFlight(it.Number)
+			w.unmarkInWork(it.Number)
 			return
 		}
 	}
@@ -174,14 +174,13 @@ func (w *Worker) workerLoop(ctx context.Context, workerID int) {
 			if !ok {
 				return
 			}
-
 			w.processOne(ctx, workerID, it)
 		}
 	}
 }
 
 func (w *Worker) processOne(ctx context.Context, workerID int, it OrderForWork) {
-	defer w.unmarkInFlight(it.Number)
+	defer w.unmarkInWork(it.Number)
 
 	if ctx.Err() != nil {
 		return
@@ -257,23 +256,23 @@ func mapAccrualStatus(s string) string {
 	}
 }
 
-// markInFlight ставит флаг "заказ уже отдан воркеру".
-func (w *Worker) markInFlight(number string) bool {
-	w.inflightMu.Lock()
-	defer w.inflightMu.Unlock()
+// markInWork ставит флаг "заказ уже отдан воркеру".
+func (w *Worker) markInWork(number string) bool {
+	w.inWorkMu.Lock()
+	defer w.inWorkMu.Unlock()
 
-	if _, exists := w.inflight[number]; exists {
+	if _, exists := w.inWork[number]; exists {
 		return false
 	}
-	w.inflight[number] = struct{}{}
+	w.inWork[number] = struct{}{}
 	return true
 }
 
-// unmarkInFlight снимает флаг inflight.
-func (w *Worker) unmarkInFlight(number string) {
-	w.inflightMu.Lock()
-	delete(w.inflight, number)
-	w.inflightMu.Unlock()
+// unmarkInWork снимает флаг inWork.
+func (w *Worker) unmarkInWork(number string) {
+	w.inWorkMu.Lock()
+	delete(w.inWork, number)
+	w.inWorkMu.Unlock()
 }
 
 // isAllowedNow проверяет сон:
