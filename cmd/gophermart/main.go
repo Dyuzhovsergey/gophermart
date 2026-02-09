@@ -98,7 +98,7 @@ func main() {
 	if cfg.AccrualSystemAddress == "" {
 		log.Warn("ACCRUAL_SYSTEM_ADDRESS is empty: worker disabled")
 	} else {
-		accrualClient, err := accrual.New(cfg.AccrualSystemAddress)
+		accrualClient, err := accrual.New(cfg.AccrualSystemAddress, log)
 		if err != nil {
 			log.Fatal("accrual client init failed", zap.Error(err))
 		}

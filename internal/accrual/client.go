@@ -12,6 +12,7 @@ import (
 	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
+	"go.uber.org/zap"
 )
 
 // Order — ответ accrual-сервиса.
@@ -34,10 +35,11 @@ func (e *RateLimitError) Error() string {
 type Client struct {
 	baseURL string
 	http    *retryablehttp.Client
+	log     *zap.Logger
 }
 
 // New создаёт клиента accrual.
-func New(addr string) (*Client, error) {
+func New(addr string, log *zap.Logger) (*Client, error) {
 	addr = strings.TrimSpace(addr)
 	if addr == "" {
 		return nil, fmt.Errorf("accrual address is empty")
@@ -77,6 +79,7 @@ func New(addr string) (*Client, error) {
 	return &Client{
 		baseURL: strings.TrimRight(u.String(), "/"),
 		http:    rc,
+		log:     log,
 	}, nil
 }
 
@@ -108,7 +111,7 @@ func (c *Client) GetOrder(ctx context.Context, number string) (*Order, error) {
 
 	case http.StatusTooManyRequests:
 		// 429 — читаем Retry-After (в секундах)
-		retryAfter := parseRetryAfter(resp.Header, 60*time.Second)
+		retryAfter := parseRetryAfter(resp.Header, 60*time.Second, c.log)
 		return nil, &RateLimitError{RetryAfter: retryAfter}
 
 	default:
@@ -117,7 +120,7 @@ func (c *Client) GetOrder(ctx context.Context, number string) (*Order, error) {
 }
 
 // parseRetryAfter читает Retry-After из заголовков.
-func parseRetryAfter(h http.Header, defaultValue time.Duration) time.Duration {
+func parseRetryAfter(h http.Header, defaultValue time.Duration, log *zap.Logger) time.Duration {
 	ra := strings.TrimSpace(h.Get("Retry-After"))
 	if ra == "" {
 		return defaultValue
@@ -125,6 +128,13 @@ func parseRetryAfter(h http.Header, defaultValue time.Duration) time.Duration {
 
 	sec, err := strconv.Atoi(ra)
 	if err != nil || sec <= 0 {
+		if log != nil {
+			log.Warn("invalid Retry-After header, using default",
+				zap.String("retry_after", ra),
+				zap.Error(err),
+				zap.Duration("default", defaultValue),
+			)
+		}
 		return defaultValue
 	}
 

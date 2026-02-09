@@ -8,17 +8,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func TestNew_EmptyAddr_ReturnsError(t *testing.T) {
-	_, err := New("   ")
+	_, err := New("   ", zap.NewNop())
 	if err == nil {
 		t.Fatal("want error, got nil")
 	}
 }
 
 func TestNew_AddsSchemeAndTrimsSlash(t *testing.T) {
-	c, err := New("localhost:8081/")
+	c, err := New("localhost:8081/", zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -43,7 +45,7 @@ func TestGetOrder_OK200_ReturnsOrder(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -81,7 +83,7 @@ func TestGetOrder_NoContent204_ReturnsNilOrder(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -104,7 +106,7 @@ func TestGetOrder_TooManyRequests429_WithRetryAfterHeader(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -134,7 +136,7 @@ func TestGetOrder_TooManyRequests429_WithoutRetryAfterHeader_UsesDefault(t *test
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -165,7 +167,7 @@ func TestGetOrder_TooManyRequests429_InvalidRetryAfterHeader_UsesDefault(t *test
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -195,7 +197,7 @@ func TestGetOrder_UnexpectedStatus_ReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := New(srv.URL)
+	c, err := New(srv.URL, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
