@@ -1,0 +1,101 @@
+// Package auth содержит сервис регистрации и аутентификации.
+package auth
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/Dyuzhovsergey/gophermart/internal/auth/password"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/domainerr"
+	"github.com/Dyuzhovsergey/gophermart/internal/service/userrepo"
+)
+
+// TokenManager — интерфейс для выпуска токена.
+type TokenManager interface {
+	Generate(userID int64) (string, error)
+}
+
+// Service — интерфейс сервиса авторизации.
+type Service interface {
+	Register(ctx context.Context, login, plainPassword string) (string, error)
+	LoginBasic(ctx context.Context, login, plainPassword string) (string, error)
+}
+
+// AccountProvider — интерфейс для создания счёта пользователя.
+type AccountProvider interface {
+	ProvideAccount(ctx context.Context, userID int64) error
+}
+
+type service struct {
+	repo     userrepo.Repository
+	jwt      TokenManager
+	accounts AccountProvider
+}
+
+// New создаёт сервис авторизации.
+func New(repo userrepo.Repository, jwt TokenManager, accounts AccountProvider) Service {
+	return &service{repo: repo, jwt: jwt, accounts: accounts}
+}
+
+// Register регистрирует пользователя и возвращает JWT.
+// Если логин занят — возвращает domainerr.ErrConflict.
+func (s *service) Register(ctx context.Context, login, plainPassword string) (string, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || plainPassword == "" {
+		return "", domainerr.ErrBadRequest
+	}
+
+	hash, err := password.HashPassword(plainPassword)
+	if err != nil {
+		return "", fmt.Errorf("hash password: %w", err)
+	}
+
+	id, err := s.repo.CreateUser(ctx, login, hash)
+	if err != nil {
+		return "", err
+	}
+
+	// Создаём счёт пользователя
+	if s.accounts != nil {
+		if err := s.accounts.ProvideAccount(ctx, id); err != nil {
+			return "", fmt.Errorf("ensure account: %w", err)
+		}
+	}
+
+	token, err := s.jwt.Generate(id)
+	if err != nil {
+		return "", fmt.Errorf("generate jwt: %w", err)
+	}
+
+	return token, nil
+}
+
+// LoginBasic аутентифицирует по логину/паролю (из Basic) и возвращает JWT.
+// Если пара неверная — возвращает domainerr.ErrUnauthorized.
+func (s *service) LoginBasic(ctx context.Context, login, plainPassword string) (string, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || plainPassword == "" {
+		return "", domainerr.ErrBadRequest
+	}
+
+	u, err := s.repo.GetByLogin(ctx, login)
+	if err != nil {
+		return "", err
+	}
+	if u == nil {
+		return "", domainerr.ErrUnauthorized
+	}
+
+	err = password.CheckPassword(u.Password, plainPassword)
+	if err != nil {
+		return "", fmt.Errorf("check password: %w", err)
+	}
+
+	token, err := s.jwt.Generate(u.ID)
+	if err != nil {
+		return "", fmt.Errorf("generate jwt: %w", err)
+	}
+
+	return token, nil
+}
