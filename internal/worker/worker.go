@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Dyuzhovsergey/gophermart/internal/accrual"
@@ -52,9 +53,9 @@ type Worker struct {
 	inWorkMu sync.Mutex
 	inWork   map[string]struct{}
 
-	// nextAllowed — общий сон для всех воркеров при 429 Retry-After.
-	rateMu      sync.Mutex
-	nextAllowed time.Time
+	// nextAllowedUnixNano — общий "сон" для всех воркеров при 429 Retry-After.
+	// Храним время (UnixNano), до которого нельзя отправлять запросы.
+	nextAllowedUnixNano atomic.Int64
 }
 
 // New создаёт worker pool воркер
@@ -277,11 +278,11 @@ func (w *Worker) unmarkInWork(number string) {
 
 // isAllowedNow проверяет сон:
 func (w *Worker) isAllowedNow() bool {
-	w.rateMu.Lock()
-	na := w.nextAllowed
-	w.rateMu.Unlock()
-
-	return !time.Now().Before(na)
+	na := w.nextAllowedUnixNano.Load()
+	if na == 0 {
+		return true
+	}
+	return time.Now().UnixNano() >= na
 }
 
 // setNextAllowed устанавливает общий "сон" по Retry-After.
@@ -289,27 +290,32 @@ func (w *Worker) setNextAllowed(retryAfter time.Duration) {
 	if retryAfter <= 0 {
 		return
 	}
-	target := time.Now().Add(retryAfter)
+	target := time.Now().Add(retryAfter).UnixNano()
 
-	w.rateMu.Lock()
-	if target.After(w.nextAllowed) {
-		w.nextAllowed = target
+	for {
+		old := w.nextAllowedUnixNano.Load()
+		if target <= old {
+			return // текущий сон уже дольше/равен
+		}
+		if w.nextAllowedUnixNano.CompareAndSwap(old, target) {
+			return
+		}
 	}
-	w.rateMu.Unlock()
 }
 
 // sleepIfRateLimited усыпляет воркера до nextAllowed
 func (w *Worker) sleepIfRateLimited(ctx context.Context) bool {
-	w.rateMu.Lock()
-	na := w.nextAllowed
-	w.rateMu.Unlock()
-
-	now := time.Now()
-	if !now.Before(na) {
+	na := w.nextAllowedUnixNano.Load()
+	if na == 0 {
 		return true
 	}
 
-	d := time.Until(na)
+	nowNano := time.Now().UnixNano()
+	if nowNano >= na {
+		return true
+	}
+
+	d := time.Duration(na - nowNano) // это наносекунды
 	t := time.NewTimer(d)
 	defer t.Stop()
 
